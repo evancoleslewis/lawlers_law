@@ -159,3 +159,21 @@ def get_game_dict(date      : datetime
                 ,'score_list' : scores}
     
     return game_dict
+
+
+def get_all_games_on_date(game_date : str) -> dict:
+    """
+    Given a date (e.g '2022-01-01') return dictionary of all game_dicts on that date.
+    
+    Returns dictionary of game_dicts.
+    """
+    
+    game_date_dt = datetime.strptime(game_date, '%Y-%m-%d')
+    home_teams = get_home_teams_on_date(game_date_dt)
+    game_day_dict = {game_date : dict()}
+    
+    for home_team in home_teams:
+        game_dict = get_game_dict(game_date_dt, home_team)
+        game_day_dict[game_date][home_team] = game_dict
+    
+    return game_day_dict
