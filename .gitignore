@@ -1,0 +1,3 @@
+# ignore all notebooks as they are used for testing
+/notebooks
+/.ipynb_checkpoints
