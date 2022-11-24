@@ -146,8 +146,8 @@ def get_game_dict(date      : datetime
     format_date = date.strftime("%Y%m%d")
     
     game_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"
-    game_page = requests.get(url)
-    game_soup = BeautifulSoup(page.content, 'html.parser')
+    game_page = requests.get(game_url)
+    game_soup = BeautifulSoup(game_page.content, 'html.parser')
 
 
     away_team = get_away_team(game_soup, home_team)  # extract away team
