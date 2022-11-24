@@ -96,7 +96,7 @@ def get_away_team(game_soup
     Returns away team.
     """
     
-    meta_tags = game_dict.find_all('meta')
+    meta_tags = game_soup.find_all('meta')
     pattern = re.compile(f"(.*)content=\"(.*) vs {home_team}")
 
     away_team = None
@@ -109,7 +109,7 @@ def get_away_team(game_soup
 
         tag = meta_tags[i]
         if pattern.match(str(tag)):
-            team_str = re.search(f"content=\"(.*) vs {home_team}", s).group(1)  # away team is beginning of this string
+            team_str = re.search(f"content=\"(.*) vs {home_team}", str(tag)).group(1)  # away team is beginning of this string
             away_team = team_str[:3]  # first 3 characters will be away team
             
     return away_team
