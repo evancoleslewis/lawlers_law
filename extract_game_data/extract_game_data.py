@@ -65,9 +65,9 @@ def get_home_teams_on_date(date : datetime) -> list:
     
     year, month, day = get_date_parts(date)  # split date parts for url formatting
     
-    page = requests.get(f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}")
-    soup = BeautifulSoup(page.content, 'html.parser')
-    home_teams = extract_home_teams(soup)
+    game_page = requests.get(f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}")
+    game_soup = BeautifulSoup(game_page.content, 'html.parser')
+    home_teams = extract_home_teams(game_soup)
     
     return home_teams
 
