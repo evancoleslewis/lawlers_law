@@ -1,0 +1,4 @@
+away_team,home_team,final_score,win_team,lose_team,reached_100_bool,lawler_bool,score_at_100,delta_at_100
+BRK,PHI,106-115,PHI,BRK,True,False,89-100,11
+SAC,MEM,113-109,SAC,MEM,True,False,102-90,12
+DET,DEN,110-108,DET,DEN,True,False,101-88,13
