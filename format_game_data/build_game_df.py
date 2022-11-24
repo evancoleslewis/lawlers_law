@@ -6,8 +6,8 @@ import pandas as pd
 
 def test_lawlers_law(score_list : list
                     ,win_team   : str
-                    ,home_team  : str
-                    ,away_team  : str) -> tuple:
+                    ,away_team  : str
+                    ,home_team  : str) -> tuple:
 
     """
     Based on scores get lawler_bool, delta_at_100, score_at_100
@@ -31,7 +31,7 @@ def test_lawlers_law(score_list : list
         lawler_team = away_team
     else:
         lawler_team = home_team
-        
+    
     if lawler_team == win_team:
         lawler_bool = True
     else:
