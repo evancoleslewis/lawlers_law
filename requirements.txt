@@ -1,0 +1,7 @@
+pandas
+numpy
+datetime
+requests
+sys
+re
+bs4
