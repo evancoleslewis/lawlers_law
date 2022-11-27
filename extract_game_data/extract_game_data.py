@@ -72,14 +72,14 @@ def get_home_teams_on_date(date : datetime) -> list:
     return home_teams
 
 
-def extract_home_teams(soup : BeautifulSoup) -> str:
+def extract_home_teams(date_soup) -> list:
     """
     Extracts home teams from bs4 element.
     
     Returns home team.
     """
     
-    a_elements = soup.find_all('a')
+    a_elements = date_soup.find_all('a')
 
     box_scores = [bs for bs in a_elements if '/boxscores/' in str(bs)]  # get all box_score elements
     home_teams = [str(bs).split('.html')[0][-3:] for bs in box_scores]  # each home team appears in 3 letter abbrev before ".html"
