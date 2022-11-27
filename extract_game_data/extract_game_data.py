@@ -115,14 +115,14 @@ def get_away_team(game_soup
     return away_team
 
 
-def get_score_list(soup) -> list:
+def get_score_list(game_soup) -> list:
     """
     Given table of bs4.element.tag's, extract score from each tag.
     
     Returns list of unique scores in chronological order.
     """
     
-    score_tags = soup.find_all('td', class_='center')
+    score_tags = game_soup.find_all('td', class_='center')
     score_pattern = re.compile("[0-9](.*)[0-9]")  # pattern for what scores look like
     
     scores = []
@@ -135,7 +135,7 @@ def get_score_list(soup) -> list:
     return scores
 
 
-def get_game_dict(date      : datetime
+def get_game_dict(game_date : datetime
                  ,home_team : str) -> dict:
     """
     Given home_team and date, contructs dictionary of home team, away team, ordered list of scores.
@@ -143,7 +143,7 @@ def get_game_dict(date      : datetime
     Returns dictionary of teams, score_list (formatted HOME-AWAY)
     """
     
-    format_date = date.strftime("%Y%m%d")
+    format_date = game_date.strftime("%Y%m%d")  # url reads date without dashes
     
     game_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"
     game_page = requests.get(game_url)
