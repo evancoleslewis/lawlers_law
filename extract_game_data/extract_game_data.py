@@ -1,4 +1,4 @@
-from datetime import datetime 
+from datetime import datetime, timedelta 
 from bs4 import BeautifulSoup
 
 import pandas as pd
@@ -161,19 +161,42 @@ def get_game_dict(game_date : datetime
     return game_dict
 
 
-def get_all_games_on_date(game_date : str) -> dict:
+def get_all_games_on_date(game_date : datetime) -> dict:
     """
-    Given a date (e.g '2022-01-01') return dictionary of all game_dicts on that date.
+    Given a date return dictionary of all game_dicts on that date.
     
     Returns dictionary of game_dicts.
     """
     
-    game_date_dt = datetime.strptime(game_date, '%Y-%m-%d')
     home_teams = get_home_teams_on_date(game_date_dt)
-    game_day_dict = {game_date : dict()}
+    game_day_dict = dict()
     
     for home_team in home_teams:
         game_dict = get_game_dict(game_date_dt, home_team)
-        game_day_dict[game_date][home_team] = game_dict
+        game_day_dict[home_team] = game_dict
     
     return game_day_dict
+
+
+def get_all_games_between_dates(start_game_date : str
+                               ,end_game_date   : str) -> dict:
+    """
+    Given 2 dates, geta list of all dates in between them (inclusive). Then get all games on those dates
+    
+    Returns dictionary of game_dicts.
+    """
+    
+    start_game_date = datetime.strptime(start_game_date, '%Y-%m-%d')  # ensure dates are formatted properly
+    end_game_date = datetime.strptime(end_game_date, '%Y-%m-%d')
+    day_delta = (end_game_date - start_game_date).days  # get number of days between both dates
+    game_dates = [start_game_date + timedelta(days=i) for i in range(0, day_delta)]  # get list of dates in between start and end dates
+    
+    all_games_dict = dict()
+
+    for game_date in game_dates:
+        try:
+            all_games_dict[game_date] = get_all_games_on_date(game_date)
+        except:
+            print(f"No game found on {game_date}")
+        
+    return all_games_dict
