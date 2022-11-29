@@ -168,11 +168,12 @@ def get_all_games_on_date(game_date : datetime) -> dict:
     Returns dictionary of game_dicts.
     """
     
-    home_teams = get_home_teams_on_date(game_date_dt)
+    home_teams = get_home_teams_on_date(game_date)
+    
     game_day_dict = dict()
     
     for home_team in home_teams:
-        game_dict = get_game_dict(game_date_dt, home_team)
+        game_dict = get_game_dict(game_date, home_team)
         game_day_dict[home_team] = game_dict
     
     return game_day_dict

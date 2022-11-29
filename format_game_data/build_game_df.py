@@ -1,7 +1,3 @@
-import sys
-sys.path.append('../')
-from extract_game_data.extract_game_data import get_all_games_on_date
-
 import pandas as pd
 
 def test_lawlers_law(score_list : list
@@ -72,27 +68,35 @@ def get_game_attributes(away_team   : str
     return final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100
 
 
-def build_game_df(game_dict : dict) -> pd.DataFrame:
+def build_game_df(all_games_dict : dict) -> pd.DataFrame:
     """
     Builds dataframe based on home_team, away_team, score_list.
     
     Returns game_df.
     """
     
-    away_team = game_dict['away_team']
-    home_team = game_dict['home_team']
-    score_list = game_dict['score_list']
-    
-    final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100 = get_game_attributes(away_team, home_team, score_list)
-    
-    game_df = pd.DataFrame({'away_team' : [away_team]
-                           ,'home_team' : [home_team]
-                           ,'final_score' : [final_score]
-                           ,'win_team' : [win_team]
-                           ,'lose_team' : [lose_team]
-                           ,'reached_100_bool' : [reached_100_bool]
-                           ,'lawler_bool' : [lawler_bool]
-                           ,'score_at_100' : [score_at_100]
-                           ,'delta_at_100' : [delta_at_100]})
-    
+    df_dict = dict()  # dictionary where all dataframes will be stored
+
+    for game_date in all_games_dict: 
+        game_dict = all_games_dict[game_date]
+        away_team = game_dict['away_team']
+        home_team = game_dict['home_team']
+        score_list = game_dict['score_list']
+        
+        final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100 = get_game_attributes(away_team, home_team, score_list)
+        
+        game_df = pd.DataFrame({'away_team' : [away_team]
+                            ,'home_team' : [home_team]
+                            ,'final_score' : [final_score]
+                            ,'win_team' : [win_team]
+                            ,'lose_team' : [lose_team]
+                            ,'reached_100_bool' : [reached_100_bool]
+                            ,'lawler_bool' : [lawler_bool]
+                            ,'score_at_100' : [score_at_100]
+                            ,'delta_at_100' : [delta_at_100]})
+
+        df_dict[game_date] = game_df.copy()
+        
+    all_games_df = pd.concat(df_dict).reset_index(drop=True)
+
     return game_df
