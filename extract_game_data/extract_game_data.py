@@ -1,11 +1,19 @@
-from datetime import datetime, timedelta 
-from bs4 import BeautifulSoup
-
 import pandas as pd
 import numpy as np
 import requests 
 import re
 
+from datetime import datetime, timedelta 
+from bs4 import BeautifulSoup
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium import webdriver
+
+from selenium.webdriver.chrome.options import Options
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+
+options = FirefoxOptions()  # we set these options so we don't open a new window for each url
+options.add_argument("--headless")
 
 team_dict = {'ATL' : ["Atlanta Hawks"]
             ,'BKN' : ["Brooklyn Nets"]
@@ -31,6 +39,7 @@ team_dict = {'ATL' : ["Atlanta Hawks"]
             ,'ORL' : ["Orlando Magic"]
             ,'PHI' : ["Philadelphia 76ers"]
             ,'PHX' : ["Phoenix Suns"]
+            ,'PHO' : ["Phoenix Suns"]  # b-ball ref seems to use both?
             ,'POR' : ["Portland Trail Blazers"]
             ,'SAC' : ["Sacramento Kings"]
             ,'SAS' : ["San Antonio Spurs"]
@@ -55,6 +64,24 @@ def get_date_parts(date : datetime) -> tuple:
     
     return year, month, day
 
+def get_soup(url : str):
+    """
+    Given url, get bs4 parsed html AKA soup.
+
+    Return soup of url.
+    """
+
+    # driver = webdriver.Firefox(options=options)  # open headless window to access url
+    driver = webdriver.Chrome(options=chrome_options)
+
+    page = driver.get(url)
+    html = driver.page_source
+    soup = BeautifulSoup(html, features='html.parser')
+
+    driver.quit()  # quit the window
+
+    return soup
+
 
 def get_home_teams_on_date(date : datetime) -> list:
     """
@@ -64,15 +91,17 @@ def get_home_teams_on_date(date : datetime) -> list:
     """
     
     year, month, day = get_date_parts(date)  # split date parts for url formatting
+    format_date = date.strftime("%Y%m%d")  # used for identifying hometeams in extract_home_teams()
+    print(date)
     
-    game_page = requests.get(f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}")
-    game_soup = BeautifulSoup(game_page.content, 'html.parser')
-    home_teams = extract_home_teams(game_soup)
+    date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}"
+    date_soup = get_soup(date_url)
+    home_teams = extract_home_teams(date_soup, format_date)
     
     return home_teams
 
 
-def extract_home_teams(date_soup) -> list:
+def extract_home_teams(date_soup, format_date) -> list:
     """
     Extracts home teams from bs4 element.
     
@@ -81,7 +110,7 @@ def extract_home_teams(date_soup) -> list:
     
     a_elements = date_soup.find_all('a')
 
-    box_scores = [bs for bs in a_elements if '/boxscores/' in str(bs)]  # get all box_score elements
+    box_scores = [bs for bs in a_elements if f'/boxscores/{format_date}' in str(bs)]  # get all box_score elements
     home_teams = [str(bs).split('.html')[0][-3:] for bs in box_scores]  # each home team appears in 3 letter abbrev before ".html"
     clean_home_teams = set([team for team in home_teams if team in team_dict.keys()]) # verify teams are in dict, get unique set of teams
     
@@ -146,9 +175,7 @@ def get_game_dict(game_date : datetime
     format_date = game_date.strftime("%Y%m%d")  # url reads date without dashes
     
     game_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"
-    game_page = requests.get(game_url)
-    game_soup = BeautifulSoup(game_page.content, 'html.parser')
-
+    game_soup = get_soup(game_url)
 
     away_team = get_away_team(game_soup, home_team)  # extract away team
     scores = get_score_list(game_soup)
@@ -195,9 +222,9 @@ def get_all_games_between_dates(start_game_date : str
     all_games_dict = dict()
 
     for game_date in game_dates:
-        try:
-            all_games_dict[game_date] = get_all_games_on_date(game_date)
-        except:
-            print(f"No game found on {game_date}")
+        # try:
+        all_games_dict[game_date] = get_all_games_on_date(game_date)
+        # except:
+            # print(f"No game found on {game_date}")
         
     return all_games_dict
