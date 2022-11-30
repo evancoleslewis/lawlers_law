@@ -68,7 +68,7 @@ def get_game_attributes(away_team   : str
     return final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100
 
 
-def build_game_df(all_games_dict : dict) -> pd.DataFrame:
+def build_all_games_df(all_games_dict : dict) -> pd.DataFrame:
     """
     Builds dataframe based on home_team, away_team, score_list.
     
@@ -77,26 +77,30 @@ def build_game_df(all_games_dict : dict) -> pd.DataFrame:
     
     df_dict = dict()  # dictionary where all dataframes will be stored
 
-    for game_date in all_games_dict: 
-        game_dict = all_games_dict[game_date]
-        away_team = game_dict['away_team']
-        home_team = game_dict['home_team']
-        score_list = game_dict['score_list']
+    for game_date in all_games_dict.keys():  # iterate through each day
+        game_day_dict = all_games_dict[game_date]
         
-        final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100 = get_game_attributes(away_team, home_team, score_list)
-        
-        game_df = pd.DataFrame({'away_team' : [away_team]
-                            ,'home_team' : [home_team]
-                            ,'final_score' : [final_score]
-                            ,'win_team' : [win_team]
-                            ,'lose_team' : [lose_team]
-                            ,'reached_100_bool' : [reached_100_bool]
-                            ,'lawler_bool' : [lawler_bool]
-                            ,'score_at_100' : [score_at_100]
-                            ,'delta_at_100' : [delta_at_100]})
+        for home_team in game_day_dict.keys():  # each day has a set of home_team(s)
+            game_dict = game_day_dict[home_team]  # each home_team represents a game on that day
+            away_team = game_dict['away_team']
+            home_team = game_dict['home_team']
+            score_list = game_dict['score_list']
+            
+            final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100 = get_game_attributes(away_team, home_team, score_list)
+            
+            game_df = pd.DataFrame({'game_date': [game_date]
+                                ,'away_team' : [away_team]
+                                ,'home_team' : [home_team]
+                                ,'final_score' : [final_score]
+                                ,'win_team' : [win_team]
+                                ,'lose_team' : [lose_team]
+                                ,'reached_100_bool' : [reached_100_bool]
+                                ,'lawler_bool' : [lawler_bool]
+                                ,'score_at_100' : [score_at_100]
+                                ,'delta_at_100' : [delta_at_100]})
 
-        df_dict[game_date] = game_df.copy()
+            df_dict[game_date+'_'+home_team] = game_df.copy()  # each df has a unique game_date + home_team pairing
         
     all_games_df = pd.concat(df_dict).reset_index(drop=True)
 
-    return game_df
+    return all_games_df
