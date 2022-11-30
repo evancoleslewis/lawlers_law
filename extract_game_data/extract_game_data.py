@@ -197,13 +197,16 @@ def get_all_games_on_date(game_date : datetime) -> dict:
     
     home_teams = get_home_teams_on_date(game_date)
     
-    game_day_dict = dict()
+    game_dict = dict()
+    all_games_dict = dict()
     
     for home_team in home_teams:
-        game_dict = get_game_dict(game_date, home_team)
-        game_day_dict[home_team] = game_dict
+        game_dict[home_team] = get_game_dict(game_date, home_team)
     
-    return game_day_dict
+    game_date_str = game_date.strftime("%Y-%m-%d")
+    all_games_dict[game_date_str] = game_dict
+
+    return all_games_dict
 
 
 def get_all_games_between_dates(start_game_date : str
@@ -223,7 +226,8 @@ def get_all_games_between_dates(start_game_date : str
 
     for game_date in game_dates:
         # try:
-        all_games_dict[game_date] = get_all_games_on_date(game_date)
+        game_date_str = game_date.strftime("%Y-%m-%d")
+        all_games_dict[game_date_str] = get_all_games_on_date(game_date)[game_date_str]
         # except:
             # print(f"No game found on {game_date}")
         
