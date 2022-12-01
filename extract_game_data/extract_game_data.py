@@ -1,19 +1,11 @@
 import pandas as pd
 import numpy as np
 import requests 
+import time
 import re
 
 from datetime import datetime, timedelta 
 from bs4 import BeautifulSoup
-from selenium.webdriver.firefox.options import Options as FirefoxOptions
-from selenium import webdriver
-
-from selenium.webdriver.chrome.options import Options
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-
-options = FirefoxOptions()  # we set these options so we don't open a new window for each url
-options.add_argument("--headless")
 
 team_dict = {'ATL' : ["Atlanta Hawks"]
             ,'BKN' : ["Brooklyn Nets"]
@@ -71,14 +63,16 @@ def get_soup(url : str):
     Return soup of url.
     """
 
-    # driver = webdriver.Firefox(options=options)  # open headless window to access url
-    driver = webdriver.Chrome(options=chrome_options)
+    with requests.Session() as session:
+        time.sleep(5)  # add delay to not overrun bball-ref with requests
+        response = session.get(url)  # request contents of url
+        if response.status_code == 200:  # status 200 means request was successful
+            soup = BeautifulSoup(response.text, features='html.parser')
+        else:
+            print(f'Unable to get data from: {url}')
+            soup = None
 
-    page = driver.get(url)
-    html = driver.page_source
-    soup = BeautifulSoup(html, features='html.parser')
-
-    driver.quit()  # quit the window
+    
 
     return soup
 

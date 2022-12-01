@@ -3,4 +3,3 @@ numpy
 datetime
 requests
 bs4
-selenium
