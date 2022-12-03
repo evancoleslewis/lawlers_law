@@ -86,7 +86,7 @@ def get_home_teams_on_date(date : datetime) -> list:
     
     year, month, day = get_date_parts(date)  # split date parts for url formatting
     format_date = date.strftime("%Y%m%d")  # used for identifying hometeams in extract_home_teams()
-    print(date)
+    print(f"Attempting to find home teams on {date.strftime('%Y-%m-%d')}")
     
     date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}"
     date_soup = get_soup(date_url)
@@ -199,6 +199,7 @@ def get_all_games_on_date(game_date : datetime) -> dict:
     
     game_date_str = game_date.strftime("%Y-%m-%d")
     all_games_dict[game_date_str] = game_dict
+    print(f"Successfully Retrieved data for games on {game_date_str}")
 
     return all_games_dict
 
@@ -214,15 +215,15 @@ def get_all_games_between_dates(start_game_date : str
     start_game_date = datetime.strptime(start_game_date, '%Y-%m-%d')  # ensure dates are formatted properly
     end_game_date = datetime.strptime(end_game_date, '%Y-%m-%d')
     day_delta = (end_game_date - start_game_date).days  # get number of days between both dates
-    game_dates = [start_game_date + timedelta(days=i) for i in range(0, day_delta)]  # get list of dates in between start and end dates
+    game_dates = [start_game_date + timedelta(days=i) for i in range(0, day_delta + 1)]  # get list of dates in between start and end dates
     
     all_games_dict = dict()
 
     for game_date in game_dates:
-        # try:
-        game_date_str = game_date.strftime("%Y-%m-%d")
-        all_games_dict[game_date_str] = get_all_games_on_date(game_date)[game_date_str]
-        # except:
-            # print(f"No game found on {game_date}")
+        try:
+            game_date_str = game_date.strftime("%Y-%m-%d")
+            all_games_dict[game_date_str] = get_all_games_on_date(game_date)[game_date_str]
+        except:
+            print(f"No game found on {game_date_str}")
         
     return all_games_dict

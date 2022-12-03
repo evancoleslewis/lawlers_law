@@ -60,6 +60,7 @@ def get_game_attributes(away_team   : str
     reached_100_bool = (max(away_score, home_score) >= 100)  # if one or both teams reached 100 return True else False
     lawler_bool = None
     delta_at_100 = None
+    score_at_100 = None
     
     if reached_100_bool:  # if someone reached 100, test lawlers
         lawler_bool, delta_at_100, score_at_100 = test_lawlers_law(score_list, win_team, away_team, home_team)
