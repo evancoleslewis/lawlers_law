@@ -214,7 +214,7 @@ def get_all_games_between_dates(start_game_date : str
     start_game_date = datetime.strptime(start_game_date, '%Y-%m-%d')  # ensure dates are formatted properly
     end_game_date = datetime.strptime(end_game_date, '%Y-%m-%d')
     day_delta = (end_game_date - start_game_date).days  # get number of days between both dates
-    game_dates = [start_game_date + timedelta(days=i) for i in range(0, day_delta)]  # get list of dates in between start and end dates
+    game_dates = [start_game_date + timedelta(days=i) for i in range(0, day_delta + 1)]  # get list of dates in between start and end dates
     
     all_games_dict = dict()
 
