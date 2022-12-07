@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 
 team_dict = {'ATL' : ["Atlanta Hawks"]
+            ,'BUF' : ["Buffalo Braves"]
             ,'BKN' : ["Brooklyn Nets"]
             ,'BOS' : ["Boston Celtics"]
             ,'CHA' : ["Charlotte Hornets"]
@@ -37,7 +38,8 @@ team_dict = {'ATL' : ["Atlanta Hawks"]
             ,'SAS' : ["San Antonio Spurs"]
             ,'TOR' : ["Toronto Raptors"]
             ,'UTA' : ["Utah Jazz"]
-            ,'WAS' : ["Washington Wizards"] }
+            ,'WAS' : ["Washington Wizards"]
+            ,'WSB' : ['Washington Bullets'] }
 
 def get_date_parts(date : datetime) -> tuple:
     
@@ -56,7 +58,7 @@ def get_date_parts(date : datetime) -> tuple:
     
     return year, month, day
 
-def get_soup(url : str):
+def get_date_soup(url : str):
     """
     Given url, get bs4 parsed html AKA soup.
 
@@ -89,7 +91,7 @@ def get_home_teams_on_date(date : datetime) -> list:
     print(f"Attempting to find home teams on {date.strftime('%Y-%m-%d')}")
     
     date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}"
-    date_soup = get_soup(date_url)
+    date_soup = get_date_soup(date_url)
     home_teams = extract_home_teams(date_soup, format_date)
     
     return home_teams
@@ -157,6 +159,31 @@ def get_score_list(game_soup) -> list:
     
     return scores
 
+def get_game_soup(game_url : str
+                ,pbp_url   : str):
+    """
+    Given url, get bs4 parsed html AKA soup.
+
+    Return soup of url.
+    """
+
+    game_soup = None 
+
+    with requests.Session() as session:
+        time.sleep(3)  # add delay to not overrun bball-ref with requests
+        response = session.get(pbp_url)  # request contents of url
+        
+        if response.status_code == 200:  # status 200 means request was successful
+            game_soup = BeautifulSoup(response.text, features='html.parser')
+        else:  # if pbp_url does not exist, we use the game_url
+            time.sleep(3)
+            response = session.get(game_url)
+            game_soup = BeautifulSoup(response.text, features='html.parser')
+            
+
+    
+
+    return game_soup
 
 def get_game_dict(game_date : datetime
                  ,home_team : str) -> dict:
@@ -168,28 +195,32 @@ def get_game_dict(game_date : datetime
     
     format_date = game_date.strftime("%Y%m%d")  # url reads date without dashes
     
-    game_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"
-    game_soup = get_soup(game_url)
+    pbp_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"  # play-by-play (pbp) will have scores
+    game_url = f"https://www.basketball-reference.com/boxscores/{format_date}0{home_team}.html"  # in case of no pbp, get search the game page
+    game_soup = get_game_soup(game_url, pbp_url)
+    
+    away_team = None 
+    score_list = None 
 
-    away_team = get_away_team(game_soup, home_team)  # extract away team
-    scores = get_score_list(game_soup)
+    if game_soup != None:  # if a play-by-play page is found, get scores and away_team
+        away_team = get_away_team(game_soup, home_team)  
+        score_list = get_score_list(game_soup)
     
     
     game_dict = {'away_team'  : away_team
                 ,'home_team'  : home_team
-                ,'score_list' : scores}
+                ,'score_list' : score_list}
     
     return game_dict
 
 
-def get_all_games_on_date(game_date : datetime) -> dict:
+def get_all_games_on_date(game_date : datetime
+                        ,home_teams : list) -> dict:
     """
-    Given a date return dictionary of all game_dicts on that date.
+    Given a date and list of home_teams return dictionary of all game_dicts on that date.
     
     Returns dictionary of game_dicts.
     """
-    
-    home_teams = get_home_teams_on_date(game_date)
     
     game_dict = dict()
     all_games_dict = dict()
@@ -197,11 +228,7 @@ def get_all_games_on_date(game_date : datetime) -> dict:
     for home_team in home_teams:
         game_dict[home_team] = get_game_dict(game_date, home_team)
     
-    game_date_str = game_date.strftime("%Y-%m-%d")
-    all_games_dict[game_date_str] = game_dict
-    print(f"Successfully Retrieved data for games on {game_date_str}")
-
-    return all_games_dict
+    return game_dict
 
 
 def get_all_games_between_dates(start_game_date : str
@@ -220,10 +247,13 @@ def get_all_games_between_dates(start_game_date : str
     all_games_dict = dict()
 
     for game_date in game_dates:
-        try:
-            game_date_str = game_date.strftime("%Y-%m-%d")
-            all_games_dict[game_date_str] = get_all_games_on_date(game_date)[game_date_str]
-        except:
-            print(f"No game found on {game_date_str}")
+        game_date_str = game_date.strftime("%Y-%m-%d")
+
+        home_teams = get_home_teams_on_date(game_date)
         
+        if len(home_teams) == 0: 
+            print(f"No games found on {game_date_str}")
+        else:
+            all_games_dict[game_date_str] = get_all_games_on_date(game_date, home_teams).copy()
+
     return all_games_dict
