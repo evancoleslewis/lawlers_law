@@ -73,22 +73,20 @@ def get_date_soup(url : str):
         else:
             print(f'Unable to get data from: {url}')
             soup = None
-
-    
-
+            
     return soup
 
 
 def get_home_teams_on_date(date : datetime) -> list:
     """
-    Given a date, get list of all home teams played on that date.
+    Given a date, get list of all home teams played on that date. Each home team represents a game on that date.
     
     Returns list of home teams. 
     """
     
     year, month, day = get_date_parts(date)  # split date parts for url formatting
     format_date = date.strftime("%Y%m%d")  # used for identifying hometeams in extract_home_teams()
-    print(f"Attempting to find home teams on {date.strftime('%Y-%m-%d')}")
+    print(f"Attempting to find games on {date.strftime('%Y-%m-%d')}")
     
     date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}"
     date_soup = get_date_soup(date_url)
@@ -251,9 +249,10 @@ def get_all_games_between_dates(start_game_date : str
 
         home_teams = get_home_teams_on_date(game_date)
         
-        if len(home_teams) == 0: 
-            print(f"No games found on {game_date_str}")
+        if len(home_teams) == 0:  
+            print(f"No games found on {game_date_str}")  # if no home_teams were found, that implies no games on that date
         else:
-            all_games_dict[game_date_str] = get_all_games_on_date(game_date, home_teams).copy()
+            all_games_dict[game_date_str] = get_all_games_on_date(game_date, home_teams).copy()  # else we get the game data and store it into all_games_dict
+            print(f"Extracted all games played on {game_date_str}")
 
     return all_games_dict
