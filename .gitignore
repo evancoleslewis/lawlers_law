@@ -11,3 +11,6 @@
 
 # ignore logs
 *.log
+
+# ignore all csvs except final
+*.csv
