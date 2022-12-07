@@ -7,8 +7,8 @@ from format_game_data.build_game_df import build_all_games_df
 
 def main():
     
-    start_game_date = '2022-11-20'  # starting here
-    end_game_date = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+    start_game_date = '1976-12-29'  
+    end_game_date = '1976-12-31'
     all_games_dict = get_all_games_between_dates(start_game_date, end_game_date)
     all_games_df = build_all_games_df(all_games_dict)
     
