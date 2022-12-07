@@ -87,7 +87,17 @@ def build_all_games_df(all_games_dict : dict) -> pd.DataFrame:
             home_team = game_dict['home_team']
             score_list = game_dict['score_list']
             
-            final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100 = get_game_attributes(away_team, home_team, score_list)
+            
+            final_score = None
+            win_team = None
+            lose_team = None
+            reached_100_bool = None
+            lawler_bool = None 
+            delta_at_100 = None 
+            score_at_100 = None 
+
+            if len(score_list) > 0:  # if we were able to get a score_list, we overwrite the attributes initialized above
+                final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100 = get_game_attributes(away_team, home_team, score_list)
             
             game_df = pd.DataFrame({'game_date': [game_date]
                                 ,'away_team' : [away_team]
