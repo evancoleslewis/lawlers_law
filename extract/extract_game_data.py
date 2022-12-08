@@ -70,7 +70,7 @@ def get_date_soup(url : str):
     """
 
     with requests.Session() as session:
-        time.sleep(5)  # add delay to not overrun bball-ref with requests
+        time.sleep(2)  # add delay to not overrun bball-ref with requests
         response = session.get(url)  # request contents of url
         if response.status_code == 200:  # status 200 means request was successful
             soup = BeautifulSoup(response.text, features='html.parser')
@@ -172,19 +172,16 @@ def get_game_soup(game_url : str
     game_soup = None 
 
     with requests.Session() as session:
-        time.sleep(3)  # add delay to not overrun bball-ref with requests
+        time.sleep(2)  # add delay to not overrun bball-ref with requests
         response = session.get(pbp_url)  # request contents of url
         
         if response.status_code == 200:  # status 200 means request was successful
             game_soup = BeautifulSoup(response.text, features='html.parser')
         else:  # if pbp_url does not exist, we use the game_url
-            time.sleep(3)
+            time.sleep(2)
             response = session.get(game_url)
             game_soup = BeautifulSoup(response.text, features='html.parser')
             
-
-    
-
     return game_soup
 
 def get_game_dict(game_date : datetime
