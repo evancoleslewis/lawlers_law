@@ -1,7 +1,7 @@
 import sys
 from datetime import datetime, timedelta
-from extract_game_data.extract_game_data import get_all_games_between_dates
-from format_game_data.build_game_df import build_all_games_df
+from extract.extract_game_data import get_all_games_between_dates
+from transform.build_game_df import build_all_games_df
 
 def main(start_game_date : str
         ,end_game_date   : str):
@@ -14,14 +14,16 @@ def main(start_game_date : str
     
     return
 
-try:
-    start_game_date = sys.argv[1]  # first date input (if one was given)
-except:
-    start_game_date = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')  # if no input is given, take yesterday as default
+if __name__ == "__main__":
 
-try:
-    end_game_date = sys.argv[2]  # second date input (if one was given)
-except:
-    end_game_date = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')  # if no input is given, take yesterday as default
+    try:
+        start_game_date = sys.argv[1]  # first date input (if one was given)
+    except:
+        start_game_date = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')  # if no input is given, take yesterday as default
 
-main(start_game_date, end_game_date)  # call the main function with given date range
+    try:
+        end_game_date = sys.argv[2]  # second date input (if one was given)
+    except:
+        end_game_date = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')  # if no input is given, take yesterday as default
+
+    main(start_game_date, end_game_date)  # call the main function with given date range
