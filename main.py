@@ -1,17 +1,26 @@
 import sys
+import logging 
+import time
 from datetime import datetime, timedelta
+
 from extract.extract_game_data import get_all_games_between_dates
 from transform.build_game_df import build_all_games_df
 
 def main(start_game_date : str
         ,end_game_date   : str):
     
+    start = datetime.now()
+    logging.basicConfig(filename='log/lawler.log', level=logging.INFO, format='%(message)s')
+    logging.info(f"***Started run at {start}*** \n")
+
     all_games_dict = get_all_games_between_dates(start_game_date, end_game_date)
     all_games_df = build_all_games_df(all_games_dict)
     
     # TODO: build load function to concat all resulting dataframes into 1, eventually load into database
     all_games_df.to_csv(f'csv/lawler_{start_game_date}_{end_game_date}.csv', index=False)
     
+    logging.info(f"***Completed run in {datetime.now() - start}***\n")
+
     return
 
 if __name__ == "__main__":

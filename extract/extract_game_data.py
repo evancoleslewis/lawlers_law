@@ -1,3 +1,4 @@
+import logging
 import pandas as pd
 import numpy as np
 import requests 
@@ -238,6 +239,8 @@ def get_all_games_between_dates(start_game_date : str
     Returns dictionary of game_dicts.
     """
     
+    logging.info(f"Searching for game data in following date range: {start_game_date} - {end_game_date}")
+
     start_game_date = datetime.strptime(start_game_date, '%Y-%m-%d')  # ensure dates are formatted properly
     end_game_date = datetime.strptime(end_game_date, '%Y-%m-%d')
     day_delta = (end_game_date - start_game_date).days  # get number of days between both dates
@@ -251,9 +254,13 @@ def get_all_games_between_dates(start_game_date : str
         home_teams = get_home_teams_on_date(game_date)
         
         if len(home_teams) == 0:  
-            print(f"No games found on {game_date_str}")  # if no home_teams were found, that implies no games on that date
+            print(f"No games found on {game_date_str}\n")  # if no home_teams were found, that implies no games on that date
+            logging.info(f"No games found on {game_date_str}\n")
+        
         else:
+            logging.info(f"Home teams found on {game_date_str}: {home_teams}\n")
             all_games_dict[game_date_str] = get_all_games_on_date(game_date, home_teams).copy()  # else we get the game data and store it into all_games_dict
-            print(f"Extracted all games played on {game_date_str}")
+            print(f"Game data successfully retrieved\n")
+            logging.info(f"Game data successfully retrieved\n")
 
     return all_games_dict
