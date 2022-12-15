@@ -44,7 +44,10 @@ team_dict = {'ATL' : ["Atlanta Hawks"]
             ,'TOR' : ["Toronto Raptors"]
             ,'UTA' : ["Utah Jazz"]
             ,'WAS' : ["Washington Wizards"]
-            ,'WSB' : ['Washington Bullets'] }
+            ,'WSB' : ['Washington Bullets']
+            }
+
+first_pbp_date = '1996-11-01'  # first game on bball reference that has play-by-play stats
 
 def get_date_parts(date : datetime) -> tuple:
     
@@ -70,14 +73,19 @@ def get_date_soup(url : str):
     Return soup of url.
     """
 
+    soup = BeautifulSoup('')
+
     with requests.Session() as session:
         time.sleep(2)  # add delay to not overrun bball-ref with requests
         response = session.get(url)  # request contents of url
+        
+        flared_bool = 'cloudflare' in response.text.lower()  # this boolean will tell use whether our request was blocked by Cloudflare or not
+        if flared_bool:
+            logging.info(f"    Response was cloudflared: {flared_bool}")  # if blocked by cloudflare, we want to break the program (stop sending requests)
+        
         if response.status_code == 200:  # status 200 means request was successful
             soup = BeautifulSoup(response.text, features='html.parser')
-        else:
-            print(f'Unable to get data from: {url}')
-            soup = None
+        
             
     return soup
 
@@ -91,7 +99,6 @@ def get_home_teams_on_date(date : datetime) -> list:
     
     year, month, day = get_date_parts(date)  # split date parts for url formatting
     format_date = date.strftime("%Y%m%d")  # used for identifying hometeams in extract_home_teams()
-    print(f"Attempting to find games on {date.strftime('%Y-%m-%d')}")
     
     date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}"
     date_soup = get_date_soup(date_url)
@@ -162,8 +169,7 @@ def get_score_list(game_soup) -> list:
     
     return scores
 
-def get_game_soup(game_url : str
-                ,pbp_url   : str):
+def get_game_soup(pbp_url   : str):
     """
     Given url, get bs4 parsed html AKA soup.
 
@@ -178,11 +184,7 @@ def get_game_soup(game_url : str
         
         if response.status_code == 200:  # status 200 means request was successful
             game_soup = BeautifulSoup(response.text, features='html.parser')
-        else:  # if pbp_url does not exist, we use the game_url
-            time.sleep(2)
-            response = session.get(game_url)
-            game_soup = BeautifulSoup(response.text, features='html.parser')
-            
+                
     return game_soup
 
 def get_game_dict(game_date : datetime
@@ -196,8 +198,7 @@ def get_game_dict(game_date : datetime
     format_date = game_date.strftime("%Y%m%d")  # url reads date without dashes
     
     pbp_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"  # play-by-play (pbp) will have scores
-    game_url = f"https://www.basketball-reference.com/boxscores/{format_date}0{home_team}.html"  # in case of no pbp, get search the game page
-    game_soup = get_game_soup(game_url, pbp_url)
+    game_soup = get_game_soup(pbp_url)
     
     away_team = None 
     score_list = None 
@@ -239,7 +240,7 @@ def get_all_games_between_dates(start_game_date : str
     Returns dictionary of game_dicts.
     """
     
-    logging.info(f"Searching for game data in following date range: {start_game_date} - {end_game_date}")
+    logging.info(f"    Searching for game data in following date range: {start_game_date} - {end_game_date}\n")
 
     start_game_date = datetime.strptime(start_game_date, '%Y-%m-%d')  # ensure dates are formatted properly
     end_game_date = datetime.strptime(end_game_date, '%Y-%m-%d')
@@ -253,14 +254,12 @@ def get_all_games_between_dates(start_game_date : str
 
         home_teams = get_home_teams_on_date(game_date)
         
-        if len(home_teams) == 0:  
-            print(f"No games found on {game_date_str}\n")  # if no home_teams were found, that implies no games on that date
-            logging.info(f"No games found on {game_date_str}\n")
+        if len(home_teams) == 0:  # if no home_teams were found, that implies no games on that date
+            logging.info(f"    No games found on {game_date_str}")
         
         else:
-            logging.info(f"Home teams found on {game_date_str}: {home_teams}\n")
+            logging.info(f"    Home teams found on {game_date_str}: {home_teams}")
             all_games_dict[game_date_str] = get_all_games_on_date(game_date, home_teams).copy()  # else we get the game data and store it into all_games_dict
-            print(f"Game data successfully retrieved\n")
-            logging.info(f"Game data successfully retrieved\n")
+            logging.info(f"    Game data successfully retrieved\n")
 
     return all_games_dict

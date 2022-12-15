@@ -112,6 +112,9 @@ def build_all_games_df(all_games_dict : dict) -> pd.DataFrame:
 
             df_dict[game_date+'_'+home_team] = game_df.copy()  # each df has a unique game_date + home_team pairing
         
-    all_games_df = pd.concat(df_dict).reset_index(drop=True)
+    all_games_df = pd.DataFrame()  # in case there is no game data in the date range
+    
+    if df_dict:  # if dict is not empty, concat into a dataframe
+        all_games_df = pd.concat(df_dict).reset_index(drop=True)
 
     return all_games_df
