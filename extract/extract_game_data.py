@@ -66,7 +66,7 @@ def get_date_parts(date : datetime) -> tuple:
     
     return year, month, day
 
-def get_date_soup(url : str):
+def get_soup(url : str):
     """
     Given url, get bs4 parsed html AKA soup.
 
@@ -77,17 +77,16 @@ def get_date_soup(url : str):
 
     with requests.Session() as session:
         time.sleep(2)  # add delay to not overrun bball-ref with requests
-        response = session.get(url)  # request contents of url
         
-        flared_bool = 'cloudflare' in response.text.lower()  # this boolean will tell use whether our request was blocked by Cloudflare or not
-        if flared_bool:
-            logging.info(f"    Response was cloudflared: {flared_bool}")  # if blocked by cloudflare, we want to break the program (stop sending requests)
-        
-        if response.status_code == 200:  # status 200 means request was successful
-            soup = BeautifulSoup(response.text, features='html.parser')
-        
-            
-    return soup
+        try:
+            response = session.get(url)  # request contents of url
+            resp_code = response.status_code      
+            if resp_code == 200:  # status 200 means request was successful
+                soup = BeautifulSoup(response.text, features='html.parser')
+        except:
+            logging.warning(f"Error occurred when accessing: {url}")
+
+    return soup, resp_code
 
 
 def get_home_teams_on_date(date : datetime) -> list:
@@ -97,14 +96,18 @@ def get_home_teams_on_date(date : datetime) -> list:
     Returns list of home teams. 
     """
     
+    home_teams = []
+
     year, month, day = get_date_parts(date)  # split date parts for url formatting
     format_date = date.strftime("%Y%m%d")  # used for identifying hometeams in extract_home_teams()
     
     date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}"
-    date_soup = get_date_soup(date_url)
-    home_teams = extract_home_teams(date_soup, format_date)
+    date_soup, resp_code = get_soup(date_url)
+
+    if resp_code == 200:
+        home_teams = extract_home_teams(date_soup, format_date)
     
-    return home_teams
+    return home_teams, resp_code
 
 
 def extract_home_teams(date_soup, format_date) -> list:
@@ -169,24 +172,6 @@ def get_score_list(game_soup) -> list:
     
     return scores
 
-def get_game_soup(pbp_url   : str):
-    """
-    Given url, get bs4 parsed html AKA soup.
-
-    Return soup of url.
-    """
-
-    game_soup = None 
-
-    with requests.Session() as session:
-        time.sleep(2)  # add delay to not overrun bball-ref with requests
-        response = session.get(pbp_url)  # request contents of url
-        
-        if response.status_code == 200:  # status 200 means request was successful
-            game_soup = BeautifulSoup(response.text, features='html.parser')
-                
-    return game_soup
-
 def get_game_dict(game_date : datetime
                  ,home_team : str) -> dict:
     """
@@ -198,12 +183,12 @@ def get_game_dict(game_date : datetime
     format_date = game_date.strftime("%Y%m%d")  # url reads date without dashes
     
     pbp_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"  # play-by-play (pbp) will have scores
-    game_soup = get_game_soup(pbp_url)
+    game_soup, resp_code = get_soup(pbp_url)
     
     away_team = None 
     score_list = None 
 
-    if game_soup != None:  # if a play-by-play page is found, get scores and away_team
+    if resp_code == 200:  # if a play-by-play page is found, get scores and away_team
         away_team = get_away_team(game_soup, home_team)  
         score_list = get_score_list(game_soup)
     
@@ -224,7 +209,6 @@ def get_all_games_on_date(game_date : datetime
     """
     
     game_dict = dict()
-    all_games_dict = dict()
     
     for home_team in home_teams:
         game_dict[home_team] = get_game_dict(game_date, home_team)
@@ -235,7 +219,7 @@ def get_all_games_on_date(game_date : datetime
 def get_all_games_between_dates(start_game_date : str
                                ,end_game_date   : str) -> dict:
     """
-    Given 2 dates, geta list of all dates in between them (inclusive). Then get all games on those dates
+    Given 2 dates, get list of all dates in between them (inclusive). Then get all games on those dates
     
     Returns dictionary of game_dicts.
     """
@@ -252,14 +236,15 @@ def get_all_games_between_dates(start_game_date : str
     for game_date in game_dates:
         game_date_str = game_date.strftime("%Y-%m-%d")
 
-        home_teams = get_home_teams_on_date(game_date)
+        home_teams, resp_code = get_home_teams_on_date(game_date)
         
-        if len(home_teams) == 0:  # if no home_teams were found, that implies no games on that date
-            logging.info(f"    No games found on {game_date_str}")
-        
-        else:
+        if resp_code == 200:  
             logging.info(f"    Home teams found on {game_date_str}: {home_teams}")
             all_games_dict[game_date_str] = get_all_games_on_date(game_date, home_teams).copy()  # else we get the game data and store it into all_games_dict
             logging.info(f"    Game data successfully retrieved\n")
+        
+        else:
+            logging.Error(f"    Issue occurred while getting games on: {game_date_str}")
+            break
 
     return all_games_dict
