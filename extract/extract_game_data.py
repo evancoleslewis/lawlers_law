@@ -84,7 +84,7 @@ def get_soup(url : str):
             if resp_code == 200:  # status 200 means request was successful
                 soup = BeautifulSoup(response.text, features='html.parser')
         except:
-            logging.warning(f"Error occurred when accessing: {url}")
+            logging.info(f"Error occurred when accessing: {url}")
 
     return soup, resp_code
 
@@ -197,7 +197,7 @@ def get_game_dict(game_date : datetime
                 ,'home_team'  : home_team
                 ,'score_list' : score_list}
     
-    return game_dict
+    return game_dict, resp_code
 
 
 def get_all_games_on_date(game_date : datetime
@@ -208,12 +208,18 @@ def get_all_games_on_date(game_date : datetime
     Returns dictionary of game_dicts.
     """
     
-    game_dict = dict()
+    game_date_dict = dict()
     
     for home_team in home_teams:
-        game_dict[home_team] = get_game_dict(game_date, home_team)
+        game_dict, resp_code = get_game_dict(game_date, home_team)  # get game_dict based on game_date, home_team
+        
+        if resp_code == 200:  # if resposne is successful, store data
+            game_date_dict[home_team] = game_dict
+        else:
+            logging.info(f"    Error when getting {home_team} data on {game_date}")
+            break
     
-    return game_dict
+    return game_date_dict
 
 
 def get_all_games_between_dates(start_game_date : str
@@ -237,14 +243,14 @@ def get_all_games_between_dates(start_game_date : str
         game_date_str = game_date.strftime("%Y-%m-%d")
 
         home_teams, resp_code = get_home_teams_on_date(game_date)
-        
+
         if resp_code == 200:  
             logging.info(f"    Home teams found on {game_date_str}: {home_teams}")
             all_games_dict[game_date_str] = get_all_games_on_date(game_date, home_teams).copy()  # else we get the game data and store it into all_games_dict
             logging.info(f"    Game data successfully retrieved\n")
         
         else:
-            logging.Error(f"    Issue occurred while getting games on: {game_date_str}")
+            logging.info(f"    Issue occurred while getting games on: {game_date_str}")
             break
 
     return all_games_dict
