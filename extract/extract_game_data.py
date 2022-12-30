@@ -76,6 +76,7 @@ def get_soup(url : str):
     """
 
     soup = BeautifulSoup('')
+    resp_code = 0
 
     with requests.Session() as session:
         time.sleep(2)  # add delay to not overrun bball-ref with requests
@@ -85,8 +86,9 @@ def get_soup(url : str):
             resp_code = response.status_code      
             if resp_code == 200:  # status 200 means request was successful
                 soup = BeautifulSoup(response.text, features='html.parser')
-        except:
-            logging.info(f"Error occurred when accessing: {url}")
+        except Exception as e:
+            logging.info(f"The following error occurred when accessing {url} :")
+            logging.info(f"{e}")
 
     return soup, resp_code
 
