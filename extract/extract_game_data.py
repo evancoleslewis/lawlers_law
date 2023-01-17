@@ -4,7 +4,6 @@ import numpy as np
 import requests 
 import time
 import re
-import os
 
 from datetime import datetime, timedelta 
 from bs4 import BeautifulSoup
@@ -69,93 +68,27 @@ def get_date_parts(date : datetime) -> tuple:
     
     return year, month, day
 
-def write_html(html : str
-              ,html_file_path : str
-              ,directory : str):
-
+def get_soup(url : str):
     """
-    Given html string, write the html to a txt file.
+    Given url, get bs4 parsed html AKA soup.
+    Return soup of url.
     """
 
-    if not os.path.exists(directory):  # if parent directory does not exist, create it
-        os.makedirs(directory)
-
-    with open(html_file_path, 'w') as f:
-        f.write(html)
-        
-    return
-
-def get_response(url : str
-                ,html_file_path : str
-                ,directory : str):
-    """
-    Given url, get html.
-
-    Return html and response code of url.
-    """
+    soup = BeautifulSoup('')
+    resp_code = 0
 
     with requests.Session() as session:
         time.sleep(2)  # add delay to not overrun bball-ref with requests
         
         try:
             response = session.get(url)  # request contents of url
-            resp_code = response.status_code
-            resp_html = response.text  # get html from url 
-            write_html(resp_html, html_file_path, directory)  # write the html to txt file
-            logging.info(f"Successfully wrote the following html to txt file: {url}")
+            resp_code = response.status_code      
+            if resp_code == 200:  # status 200 means request was successful
+                soup = BeautifulSoup(response.text, features='html.parser')
 
         except Exception as e:
             logging.info(f"The following error occurred when accessing {url} :")
             logging.info(f"{e}")
-
-    return resp_html, resp_code
-
-def construct_file_path(url : str
-                       ,date : datetime) -> str:
-    """"
-    Given url and date, construct the corresponding file_path.
-    
-    Returns file_path
-    """
-
-    url_abbrev = url.split('boxscores/')[-1]  # get last part of url for file_name
-    file_name = url_abbrev.replace('pbp/','').replace('?','').replace('=','')  # clean repeat/illegal characters
-    date_str = date.strftime("%Y-%m-%d")  # format date to string
-
-    script_path = os.path.dirname(__file__)  # get directory of this script
-    html_file_path = os.path.join(script_path, f'../data/html/{date_str}/{file_name}')  # from this directory, go back and access data/html/ & append date, url_abbrev
-    html_file_path = os.path.abspath(os.path.realpath(html_file_path))  # ensure the path is readable
-    directory = html_file_path.replace(file_name,'') # get directory_path without file_name
-
-    return html_file_path, directory
-
-def get_soup(url  : str
-            ,date : datetime):
-    """
-    Given url, get bs4 parsed html AKA soup.
-
-    Return soup of url.
-    """
-
-    soup = BeautifulSoup('')
-    resp_code = 0
-    resp_html = ''
-
-    html_file_path, directory = construct_file_path(url, date)
-
-    if os.path.isfile(html_file_path):  # if html already exists in local file, load the text
-        logging.info(f"{html_file_path} exists locally. Attempting to read...")
-        with open(html_file_path, 'r') as f:
-            resp_html = f.read()
-            resp_code = 200  # to simulate a successful response
-    else:  # if the html does not exist locally, get it from internet
-        logging.info(f"Could not find{html_file_path} locally. Attempting to get response...")
-        resp_html, resp_code = get_response(url, html_file_path, directory)
-
-    try:
-        soup = BeautifulSoup(resp_html, features='html.parser')
-    except Exception as e:
-        logging.info(f"Issue extracting soup from: {url}")
 
     return soup, resp_code
 
@@ -168,13 +101,11 @@ def get_home_teams_on_date(date : datetime) -> list:
     """
     
     home_teams = []
-
     year, month, day = get_date_parts(date)  # split date parts for url formatting
     format_date = date.strftime("%Y%m%d")  # used for identifying hometeams in extract_home_teams()
     
-    date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}.html"
-    date_soup, resp_code = get_soup(date_url, date)
-
+    date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}"
+    date_soup, resp_code = get_soup(date_url)
     if resp_code == 200:
         home_teams = extract_home_teams(date_soup, format_date)
     
@@ -189,7 +120,6 @@ def extract_home_teams(date_soup, format_date) -> list:
     """
     
     a_elements = date_soup.find_all('a')
-    logging.info(f"{len(date_soup)}")
     box_scores = [bs for bs in a_elements if f'/boxscores/{format_date}' in str(bs)]  # get all box_score elements
     home_teams = [str(bs).split('.html')[0][-3:] for bs in box_scores]  # each home team appears in 3 letter abbrev before ".html"
     clean_home_teams = set([team for team in home_teams if team in team_dict.keys()]) # verify teams are in dict, get unique set of teams
@@ -254,7 +184,7 @@ def get_game_dict(game_date : datetime
     format_date = game_date.strftime("%Y%m%d")  # url reads date without dashes
     
     pbp_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"  # play-by-play (pbp) will have scores
-    game_soup, resp_code = get_soup(pbp_url, game_date)
+    game_soup, resp_code = get_soup(pbp_url)
     
     away_team = None 
     score_list = None 
