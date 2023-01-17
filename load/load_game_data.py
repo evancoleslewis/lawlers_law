@@ -40,5 +40,5 @@ def write_all_csv(file_path):
 
     return
 
-# csv_file_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'data/csv/'))  # get cwd, go one level up, and join data/csv to get full path
-# write_all_csv(csv_file_path+'/')  # run function with csv_file_path
+csv_file_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'data/csv/'))  # get cwd, go one level up, and join data/csv to get full path
+write_all_csv(csv_file_path+'/')  # run function with csv_file_path
