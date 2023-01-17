@@ -138,9 +138,12 @@ def get_soup(url  : str
     html_file_path = construct_file_path(url, date)
 
     if os.path.isfile(html_file_path):  # if html already exists in local file, load the text
+        logging.info(f"{html_file_path} exists locally. Attempting to read...")
         with open(html_file_path, 'r') as f:
             resp_html = f.read()
+            resp_code = 200  # to simulate a successful response
     else:  # if the html does not exist locally, get it from internet
+        logging.info(f"Could not find{html_file_path} locally. Attempting to get response...")
         resp_html, resp_code = get_response(url, html_file_path)
 
     try:
