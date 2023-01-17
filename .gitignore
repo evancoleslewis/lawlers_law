@@ -6,6 +6,9 @@
 # ignore pycache
 */__pycache__
 
+# ignore ds_store
+*.DS_Store
+
 # do not need to track version as it will remain at 3.8.6
 .python-version
 
