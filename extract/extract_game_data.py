@@ -70,11 +70,15 @@ def get_date_parts(date : datetime) -> tuple:
     return year, month, day
 
 def write_html(html : str
-              ,html_file_path : str):
+              ,html_file_path : str
+              ,directory : str):
 
     """
     Given html string, write the html to a txt file.
     """
+
+    if not os.path.exists(directory):  # if parent directory does not exist, create it
+        os.makedirs(directory)
 
     with open(html_file_path, 'w') as f:
         f.write(html)
@@ -82,7 +86,8 @@ def write_html(html : str
     return
 
 def get_response(url : str
-                ,html_file_path : str):
+                ,html_file_path : str
+                ,directory : str):
     """
     Given url, get html.
 
@@ -96,7 +101,7 @@ def get_response(url : str
             response = session.get(url)  # request contents of url
             resp_code = response.status_code
             resp_html = response.text  # get html from url 
-            write_html(resp_html, html_file_path)  # write the html to txt file
+            write_html(resp_html, html_file_path, directory)  # write the html to txt file
             logging.info(f"Successfully wrote the following html to txt file: {url}")
 
         except Exception as e:
@@ -114,14 +119,15 @@ def construct_file_path(url : str
     """
 
     url_abbrev = url.split('boxscores/')[-1]  # get last part of url for file_name
-    clean_url_abbrev = url_abbrev.replace('pbp/','').replace('?','').replace('=','')  # clean repeat/illegal characters
+    file_name = url_abbrev.replace('pbp/','').replace('?','').replace('=','')  # clean repeat/illegal characters
     date_str = date.strftime("%Y-%m-%d")  # format date to string
 
     script_path = os.path.dirname(__file__)  # get directory of this script
-    html_file_path = os.path.join(script_path, f'../data/html/{date_str}/{clean_url_abbrev}')  # from this directory, go back and access data/html/ & append date, url_abbrev
+    html_file_path = os.path.join(script_path, f'../data/html/{date_str}/{file_name}')  # from this directory, go back and access data/html/ & append date, url_abbrev
     html_file_path = os.path.abspath(os.path.realpath(html_file_path))  # ensure the path is readable
+    directory = html_file_path.replace(file_name,'') # get directory_path without file_name
 
-    return html_file_path
+    return html_file_path, directory
 
 def get_soup(url  : str
             ,date : datetime):
@@ -135,7 +141,7 @@ def get_soup(url  : str
     resp_code = 0
     resp_html = ''
 
-    html_file_path = construct_file_path(url, date)
+    html_file_path, directory = construct_file_path(url, date)
 
     if os.path.isfile(html_file_path):  # if html already exists in local file, load the text
         logging.info(f"{html_file_path} exists locally. Attempting to read...")
@@ -144,7 +150,7 @@ def get_soup(url  : str
             resp_code = 200  # to simulate a successful response
     else:  # if the html does not exist locally, get it from internet
         logging.info(f"Could not find{html_file_path} locally. Attempting to get response...")
-        resp_html, resp_code = get_response(url, html_file_path)
+        resp_html, resp_code = get_response(url, html_file_path, directory)
 
     try:
         soup = BeautifulSoup(resp_html, features='html.parser')
@@ -183,7 +189,7 @@ def extract_home_teams(date_soup, format_date) -> list:
     """
     
     a_elements = date_soup.find_all('a')
-
+    logging.info(f"{len(date_soup)}")
     box_scores = [bs for bs in a_elements if f'/boxscores/{format_date}' in str(bs)]  # get all box_score elements
     home_teams = [str(bs).split('.html')[0][-3:] for bs in box_scores]  # each home team appears in 3 letter abbrev before ".html"
     clean_home_teams = set([team for team in home_teams if team in team_dict.keys()]) # verify teams are in dict, get unique set of teams
