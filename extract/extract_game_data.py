@@ -4,6 +4,7 @@ import numpy as np
 import requests 
 import time
 import re
+import os
 
 from datetime import datetime, timedelta 
 from bs4 import BeautifulSoup
@@ -94,21 +95,17 @@ def get_date_parts(date : datetime) -> tuple:
     
     return year, month, day
 
-def get_soup(file_name : str
-            ,html      : str):
+def get_soup(html : str):
     """
     Given html, get bs4 parsed html AKA soup.
     Return soup of html.
     """
 
-    soup = BeautifulSoup('')
-
     try:
-        soup = BeautifulSoup(response.text, features='html.parser')
+        soup = BeautifulSoup(html, features='html.parser')
 
     except Exception as e:
-        logging.info(f"The following error occurred when accessing {file_name} :")
-        logging.info(f"{e}")
+        logging.info(f"The following error occurred when getting soup:\n{e}")
 
     return soup
 
@@ -142,14 +139,14 @@ def get_full_file_path(file_name : str
 
     script_path = os.path.dirname(__file__)  # get directory of this script
     file_path = os.path.join(script_path, f"../data/html/{date.strftime('%Y-%m-%d')}/")  # use script_path to access lawlers_law/data/html directory
-    file_path = os.path.abspath(os.path.real_path(full_file_path))  # ensure file path is readable (changes /extract/../data to /lawlers/data/)
+    file_path = os.path.abspath(os.path.realpath(file_path))  # ensure file path is readable (changes /extract/../data to /lawlers/data/)
 
     # ensure file path exists
     if not os.path.exists(file_path):
         os.makedirs(file_path)  # if not exists, create it
         logging.info(f"New directory created: {file_path}")
 
-    full_file_path = file_path + file_name  # add file_name to get full_file_path
+    full_file_path = file_path + '/' + file_name  # add file_name to get full_file_path
 
     return full_file_path
 
@@ -175,8 +172,8 @@ def write_html_from_url(url   : str
             resp_html = response.text  # this is the html of the url    
 
             if resp_code == 200:  # status 200 means request was successful
-                with open(full_file_path, 'w') as target_file:
-                    target_file.write(resp_html)  # write the html to the corresponding file
+                with open(full_file_path, 'w') as write_file:
+                    write_file.write(resp_html)  # write the html to the corresponding file
 
         except Exception as e:
             logging.info(f"The following error occurred when accessing/writing the html from {url} :")
@@ -198,7 +195,7 @@ def get_game_date_html(date : datetime) -> list:
 
     year, month, day = get_date_parts(date)  # split date parts for url formatting
     format_date = date.strftime("%Y%m%d")  # used for identifying hometeams in extract_home_teams()
-    date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}"
+    date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}.html"
 
     file_name = abbrev_url_to_file_name(date_url)  # abbreviate url to file_name
     full_file_path = get_full_file_path(file_name, date)  # get full path of file
@@ -207,16 +204,17 @@ def get_game_date_html(date : datetime) -> list:
     if os.path.isfile(full_file_path):
         logging.info(f"{file_name} exists locally. Attempting to read...")
         resp_code = 200 # simulate successful response
-        with open(full_file_path, 'r') as target_file:
-            resp_html = f.read()
+        with open(full_file_path, 'r') as read_file:
+            resp_html = read_file.read()
     
     # if we don't have html locally, retrieve/write it and get home_teams.
     else:
         resp_html, resp_code = write_html_from_url(date_url, date)  # attempt to write html
-        if resp_code == 200:
-            home_teams = extract_home_teams(resp_html, format_date)
-        else:
-            logging.error(f"Error occurred when accessing {date_url}")
+    
+    if resp_code == 200:
+        home_teams = extract_home_teams(resp_html, format_date)
+    else:
+        logging.error(f"Error occurred when accessing {date_url}")
     
     return home_teams, resp_code
 
@@ -258,7 +256,7 @@ def write_game_html(game_date : datetime
     
     # if we don't have html locally, retrieve/write it and get home_teams.
     else:
-        resp_html, resp_code = write_html_from_url(pbp_url, date)  # attempt to write html
+        resp_html, resp_code = write_html_from_url(pbp_url, game_date)  # attempt to write html
 
     
     return resp_html, resp_code
@@ -311,7 +309,9 @@ def get_game_html_between_dates(start_game_date : str
 
         if resp_code == 200:  
             logging.info(f"Home teams found on {game_date_str}: {home_teams}")
-            write_game_html(game_date, home_teams)
+            # write each game to its own html file
+            for home_team in home_teams:
+                resp_html, resp_code = write_game_html(game_date, home_team)
         
         else:
             logging.info(f"Issue occurred while getting games on: {game_date_str}")
