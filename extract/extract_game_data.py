@@ -249,6 +249,28 @@ def get_all_games_on_date(game_date : datetime
     
     return game_date_dict
 
+def get_date_range(start_game_date : str
+                  ,end_game_date   : str) -> tuple:
+    """
+    Takes start date and end date and does 2 things:
+        1. Ensure dates are formatted properly
+        2. Generates a list of dates in between start and end (inclusive)
+    
+    Returns formatted dates and date_list
+    """
+
+    try:
+        start_game_date = datetime.strptime(start_game_date, '%Y-%m-%d')  # ensure dates are formatted properly
+        end_game_date = datetime.strptime(end_game_date, '%Y-%m-%d')
+        day_delta = (end_game_date - start_game_date).days  # get number of days between both dates
+        game_dates = [start_game_date + timedelta(days=i) for i in range(0, day_delta + 1)]  # get list of dates in between start and end dates
+    
+    except Exception as e:
+        print('There is something wrong with the dates inputted. Ensure your dates formatted as YYYY-MM-DD.')
+        logging.error(f"The following error occurred when trying to generate a date range:\n{e}")
+
+    return start_game_date, end_game_date, game_dates 
+
 
 def get_all_games_between_dates(start_game_date : str
                                ,end_game_date   : str) -> dict:
@@ -260,10 +282,7 @@ def get_all_games_between_dates(start_game_date : str
     
     logging.info(f"    Searching for game data in following date range: {start_game_date} - {end_game_date}\n")
 
-    start_game_date = datetime.strptime(start_game_date, '%Y-%m-%d')  # ensure dates are formatted properly
-    end_game_date = datetime.strptime(end_game_date, '%Y-%m-%d')
-    day_delta = (end_game_date - start_game_date).days  # get number of days between both dates
-    game_dates = [start_game_date + timedelta(days=i) for i in range(0, day_delta + 1)]  # get list of dates in between start and end dates
+    start_game_date, end_game_date, game_dates = get_date_range(start_game_date, end_game_date)  # get list of dates in between start and end (inclusive)
     
     all_games_dict = dict()
 
