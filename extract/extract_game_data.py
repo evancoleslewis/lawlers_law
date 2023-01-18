@@ -182,36 +182,55 @@ def write_html_from_url(url   : str
             logging.info(f"The following error occurred when accessing/writing the html from {url} :")
             logging.info(f"{e}")
 
-    return resp_code
+    return resp_html, resp_code
 
 
-def get_home_teams_on_date(date : datetime) -> list:
+def get_game_date_html(date : datetime) -> list:
     """
-    Given a date, get list of all home teams played on that date. Each home team represents a game on that date.
+    Given a date, check if we have html for that date. If not, attempt to retrieve/write html.
     
+    If we get html for the date, get the home teams on date.
+
     Returns list of home teams. 
     """
     
     home_teams = []
+
     year, month, day = get_date_parts(date)  # split date parts for url formatting
     format_date = date.strftime("%Y%m%d")  # used for identifying hometeams in extract_home_teams()
-    
     date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}"
+
+    file_name = abbrev_url_to_file_name(date_url)  # abbreviate url to file_name
+    full_file_path = get_full_file_path(file_name, date)  # get full path of file
+
+    # if we have the html locally, read it
+    if os.path.isfile(full_file_path):
+        logging.info(f"{file_name} exists locally. Attempting to read...")
+        resp_code = 200 # simulate successful response
+        with open(full_file_path, 'r') as target_file:
+            resp_html = f.read()
     
-    resp_code = write_html_from_url(date_url)
-    if resp_code == 200:
-        home_teams = extract_home_teams(date_soup, format_date)
+    # if we don't have html locally, retrieve/write it and get home_teams.
+    else:
+        resp_html, resp_code = write_html_from_url(date_url, date)  # attempt to write html
+        if resp_code == 200:
+            home_teams = extract_home_teams(resp_html, format_date)
+        else:
+            logging.error(f"Error occurred when accessing {date_url}")
     
     return home_teams, resp_code
 
 
-def extract_home_teams(date_soup, format_date) -> list:
+def extract_home_teams(date_html : str
+                    ,format_date : str) -> list:
     """
-    Extracts home teams from bs4 element.
+    Gets soup from html and parses soup to get list of home_teams.
     
-    Returns home team.
+    Returns list of home team.
     """
     
+    date_soup = get_soup(date_html)  # turn html to readable soup
+
     a_elements = date_soup.find_all('a')
     box_scores = [bs for bs in a_elements if f'/boxscores/{format_date}' in str(bs)]  # get all box_score elements
     home_teams = [str(bs).split('.html')[0][-3:] for bs in box_scores]  # each home team appears in 3 letter abbrev before ".html"
@@ -220,26 +239,29 @@ def extract_home_teams(date_soup, format_date) -> list:
     return list(clean_home_teams)
 
 
-def get_all_games_on_date(game_date : datetime
-                        ,home_teams : list) -> dict:
+def write_game_html(game_date : datetime
+                 ,home_team : str) -> dict:
     """
-    Given a date and list of home_teams return dictionary of all game_dicts on that date.
-    
-    Returns dictionary of game_dicts.
+    Given home_team and date, look for the game html locally. If exists,
     """
     
-    game_date_dict = dict()
+    format_date = game_date.strftime("%Y%m%d")  # url reads date without dashes
     
-    for home_team in home_teams:
-        game_dict, resp_code = get_game_dict(game_date, home_team)  # get game_dict based on game_date, home_team
-        
-        if resp_code == 200:  # if resposne is successful, store data
-            game_date_dict[home_team] = game_dict
-        else:
-            logging.info(f"    Error when getting {home_team} data on {game_date}")
-            break
+    pbp_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"  # play-by-play (pbp) will have scores
+    file_name = abbrev_url_to_file_name(pbp_url)
+    full_file_path = get_full_file_path(file_name, game_date)
+
+    # if we have the html locally, read it
+    if os.path.isfile(full_file_path):
+        logging.info(f"{file_name} exists locally. Moving to next game.")
+        resp_code = 200  # simulate successful response
     
-    return game_date_dict
+    # if we don't have html locally, retrieve/write it and get home_teams.
+    else:
+        resp_html, resp_code = write_html_from_url(pbp_url, date)  # attempt to write html
+
+    
+    return resp_html, resp_code
 
 def get_date_range(start_game_date : str
                   ,end_game_date   : str) -> tuple:
@@ -264,7 +286,7 @@ def get_date_range(start_game_date : str
     return start_game_date, end_game_date, game_dates 
 
 
-def check_for_games_between_dates(start_game_date : str
+def get_game_html_between_dates(start_game_date : str
                                ,end_game_date   : str) -> dict:
     """
     Given 2 dates, get list of all dates in between them (inclusive). 
@@ -272,12 +294,10 @@ def check_for_games_between_dates(start_game_date : str
     
     Returns dictionary of game_dicts.
     """
-    
+
     logging.info(f"Searching for game data in following date range: {start_game_date} - {end_game_date}\n")
     start_game_date, end_game_date, game_dates = get_date_range(start_game_date, end_game_date)  # get list of dates in between start and end (inclusive)
     
-    all_games_dict = dict()
-
     # For each game_date, attempt to find games. 
     # If a game is found, check to see if the html for the game is stored locally yet.
     ## If html is stored locally, move to next game/date.
@@ -287,15 +307,14 @@ def check_for_games_between_dates(start_game_date : str
     for game_date in game_dates:
         game_date_str = game_date.strftime("%Y-%m-%d")
 
-        home_teams, resp_code = get_home_teams_on_date(game_date)
+        home_teams, resp_code = get_game_date_html(game_date)  # read or extract game_date_html and get home_teams on_date
 
         if resp_code == 200:  
-            logging.info(f"    Home teams found on {game_date_str}: {home_teams}")
-            all_games_dict[game_date_str] = get_all_games_on_date(game_date, home_teams).copy()  # else we get the game data and store it into all_games_dict
-            logging.info(f"    Game data successfully retrieved\n")
+            logging.info(f"Home teams found on {game_date_str}: {home_teams}")
+            write_game_html(game_date, home_teams)
         
         else:
-            logging.info(f"    Issue occurred while getting games on: {game_date_str}")
+            logging.info(f"Issue occurred while getting games on: {game_date_str}")
             break
 
-    return all_games_dict
+    return 
