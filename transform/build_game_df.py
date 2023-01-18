@@ -67,7 +67,7 @@ def get_soup(file_name : str
         logging.info(f"The following error occurred when accessing {file_name} :")
         logging.info(f"{e}")
 
-    return soup, resp_code
+    return soup
 
 def get_away_team(game_soup
                  ,home_team : str) -> str:
