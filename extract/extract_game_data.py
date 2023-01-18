@@ -94,14 +94,77 @@ def get_date_parts(date : datetime) -> tuple:
     
     return year, month, day
 
-def write_html_from_url(url : str):
+def get_soup(file_name : str
+            ,html      : str):
     """
-    Given url, retrieve html from url. Then write the html to file with abbreviated name.
+    Given html, get bs4 parsed html AKA soup.
+    Return soup of html.
+    """
+
+    soup = BeautifulSoup('')
+
+    try:
+        soup = BeautifulSoup(response.text, features='html.parser')
+
+    except Exception as e:
+        logging.info(f"The following error occurred when accessing {file_name} :")
+        logging.info(f"{e}")
+
+    return soup
+
+def abbrev_url_to_file_name(url : str) -> str:
+    """
+    Abbreviate the given url to be suitable for a file name. (remove commonalities/illegal characters)
+
+    Return cleaned abbrevation of url.
+    """
+
+    # define illegal characters and their replacements
+    replace_dict = {'?'  : ''
+                    ,'&' : ''
+                    ,'=' : ''
+                    ,'/' : '_'}
+
+    url_tail = url.split('boxscores/')[-1]  # get the last piece of the url (unique for each date/game)
+    
+    for ill in replace_dict.keys():
+        url_tail = url_tail.replace(ill, replace_dict[ill])  # replace each illegal character
+    
+    return url_tail
+
+def get_full_file_path(file_name : str
+                      ,date      : datetime) -> str:
+    """
+    Given file_name and date, ensure correct directory exists: lawlers_law/data/html/{date}/
+
+    Returns full_file_path of corresponding directory.
+    """
+
+    script_path = os.path.dirname(__file__)  # get directory of this script
+    file_path = os.path.join(script_path, f"../data/html/{date.strftime('%Y-%m-%d')}/")  # use script_path to access lawlers_law/data/html directory
+    file_path = os.path.abspath(os.path.real_path(full_file_path))  # ensure file path is readable (changes /extract/../data to /lawlers/data/)
+
+    # ensure file path exists
+    if not os.path.exists(file_path):
+        os.makedirs(file_path)  # if not exists, create it
+        logging.info(f"New directory created: {file_path}")
+
+    full_file_path = file_path + file_name  # add file_name to get full_file_path
+
+    return full_file_path
+
+
+def write_html_from_url(url   : str
+                        ,date : datetime):
+    """
+    Given url, retrieve html from url. Then write the html to file with abbreviated name in the given date directory.
 
     Return response code of url response.
     """
 
-    resp_code = 0
+    resp_code = 0  # initialize in case we do not get a resp_code from response
+    file_name = abbrev_url_to_file_name(url)  # abbreviate url to file_name
+    full_file_path = get_full_file_path(file_name, date)  # get full path of file
 
     with requests.Session() as session:
         time.sleep(2)  # add delay to not overrun bball-ref with requests
@@ -110,11 +173,13 @@ def write_html_from_url(url : str):
             response = session.get(url)  # request contents of url
             resp_code = response.status_code  
             resp_html = response.text  # this is the html of the url    
+
             if resp_code == 200:  # status 200 means request was successful
-                soup = BeautifulSoup(response.text, features='html.parser')
+                with open(full_file_path, 'w') as target_file:
+                    target_file.write(resp_html)  # write the html to the corresponding file
 
         except Exception as e:
-            logging.info(f"The following error occurred when accessing {url} :")
+            logging.info(f"The following error occurred when accessing/writing the html from {url} :")
             logging.info(f"{e}")
 
     return resp_code
@@ -132,7 +197,8 @@ def get_home_teams_on_date(date : datetime) -> list:
     format_date = date.strftime("%Y%m%d")  # used for identifying hometeams in extract_home_teams()
     
     date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}"
-    date_soup, resp_code = get_soup(date_url)
+    
+    resp_code = write_html_from_url(date_url)
     if resp_code == 200:
         home_teams = extract_home_teams(date_soup, format_date)
     
@@ -272,19 +338,25 @@ def get_date_range(start_game_date : str
     return start_game_date, end_game_date, game_dates 
 
 
-def get_all_games_between_dates(start_game_date : str
+def check_for_games_between_dates(start_game_date : str
                                ,end_game_date   : str) -> dict:
     """
-    Given 2 dates, get list of all dates in between them (inclusive). Then get all games on those dates
+    Given 2 dates, get list of all dates in between them (inclusive). 
+    Then find all games on those dates. For each game, check if the game data (html) is stored locally. If not, retrieve the html and store locally
     
     Returns dictionary of game_dicts.
     """
     
-    logging.info(f"    Searching for game data in following date range: {start_game_date} - {end_game_date}\n")
-
+    logging.info(f"Searching for game data in following date range: {start_game_date} - {end_game_date}\n")
     start_game_date, end_game_date, game_dates = get_date_range(start_game_date, end_game_date)  # get list of dates in between start and end (inclusive)
     
     all_games_dict = dict()
+
+    # For each game_date, attempt to find games. 
+    # If a game is found, check to see if the html for the game is stored locally yet.
+    ## If html is stored locally, move to next game/date.
+    ## If html is not stored locally, attempt to retrieve from internet and write the html locally.
+    # If no games are found, move to next date.
 
     for game_date in game_dates:
         game_date_str = game_date.strftime("%Y-%m-%d")
