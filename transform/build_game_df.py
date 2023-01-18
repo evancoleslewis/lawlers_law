@@ -51,6 +51,24 @@ team_dict = {'ATL' : ["Atlanta Hawks"]
 
 ### functions below are for parsing html ###
 
+def get_soup(file_name : str
+            ,html      : str):
+    """
+    Given html, get bs4 parsed html AKA soup.
+    Return soup of html.
+    """
+
+    soup = BeautifulSoup('')
+
+    try:
+        soup = BeautifulSoup(response.text, features='html.parser')
+
+    except Exception as e:
+        logging.info(f"The following error occurred when accessing {file_name} :")
+        logging.info(f"{e}")
+
+    return soup, resp_code
+
 def get_away_team(game_soup
                  ,home_team : str) -> str:
     """
