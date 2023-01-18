@@ -8,6 +8,47 @@ import re
 from datetime import datetime, timedelta 
 from bs4 import BeautifulSoup
 
+team_dict = {'ATL' : ["Atlanta Hawks"]
+            ,'BUF' : ["Buffalo Braves"]
+            ,'BKN' : ["Brooklyn Nets"]
+            ,'BOS' : ["Boston Celtics"]
+            ,'BUF' : ['Buffalo Braves']
+            ,'CHA' : ["Charlotte Hornets"]
+            ,'CHH' : ['Charlotte Hornets']
+            ,'CHI' : ["Chicago Bulls"]
+            ,'CLE' : ["Cleveland Cavaliers"]
+            ,'DAL' : ["Dallas Mavericks"]
+            ,'DEN' : ["Denver Nuggets"]
+            ,'DET' : ["Detroit Pistons"]
+            ,'GSW' : ["Golden State Warriors"]
+            ,'HOU' : ["Houston Rockets"]
+            ,'IND' : ["Indiana Pacers"]
+            ,'KCK' : ['Kansas City Kings']
+            ,'LAC' : ["Los Angeles Clippers"]
+            ,'LAL' : ["Los Angeles Lakers"]
+            ,'MEM' : ["Memphis Grizzlies"]
+            ,'MIA' : ["Miami Heat"]
+            ,'MIL' : ["Milwaukee Bucks"]
+            ,'MIN' : ["Minnesota Timberwolves"]
+            ,'NJN' : ['New Jersey Nets']
+            ,'NOJ' : ['New Orleans Jazz']
+            ,'NOP' : ["New Orleans Pelicans"]
+            ,'NYK' : ["New York Knicks"]
+            ,'OKC' : ["Oklahoma City Thunder"]
+            ,'ORL' : ["Orlando Magic"]
+            ,'PHI' : ["Philadelphia 76ers"]
+            ,'PHX' : ["Phoenix Suns"]
+            ,'PHO' : ["Phoenix Suns"]  # b-ball ref seems to use both?
+            ,'POR' : ["Portland Trail Blazers"]
+            ,'SAC' : ["Sacramento Kings"]
+            ,'SAS' : ["San Antonio Spurs"]
+            ,'SEA' : ["Seattle SuperSonics"]
+            ,'TOR' : ["Toronto Raptors"]
+            ,'UTA' : ["Utah Jazz"]
+            ,'WAS' : ["Washington Wizards"]
+            ,'WSB' : ['Washington Bullets']
+            }
+
 ### functions below are for parsing html ###
 
 def get_away_team(game_soup
