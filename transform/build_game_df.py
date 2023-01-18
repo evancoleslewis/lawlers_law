@@ -1,4 +1,89 @@
+import logging
 import pandas as pd
+import numpy as np
+import requests 
+import time
+import re
+
+from datetime import datetime, timedelta 
+from bs4 import BeautifulSoup
+
+### functions below are for parsing html ###
+
+def get_away_team(game_soup
+                 ,home_team : str) -> str:
+    """
+    Given home_team and game_soup, extract away team of game.
+    
+    Returns away team.
+    """
+    
+    meta_tags = game_soup.find_all('meta')
+    pattern = re.compile(f"(.*)content=\"(.*) vs {home_team}")
+
+    away_team = None
+    i = -1
+
+    # search for away_team, if team is not found within meta_tags, return 'not_found'
+    while not away_team:
+        i += 1  # move to next index
+        if i == len(meta_tags): away_team = 'not_found'  # if index out of bounds, we could not find team
+
+        tag = meta_tags[i]
+        if pattern.match(str(tag)):
+            team_str = re.search(f"content=\"(.*) vs {home_team}", str(tag)).group(1)  # away team is beginning of this string
+            away_team = team_str[:3]  # first 3 characters will be away team
+            
+    return away_team
+
+
+def get_score_list(game_soup) -> list:
+    """
+    Given table of bs4.element.tag's, extract score from each tag.
+    
+    Returns list of unique scores in chronological order.
+    """
+    
+    score_tags = game_soup.find_all('td', class_='center')
+    score_pattern = re.compile("[0-9](.*)[0-9]")  # pattern for what scores look like
+    
+    scores = []
+    for tag in score_tags:
+        score = re.search(">(.*)<", str(tag)).group(1)  # all scores are formatted as >away_score-home_score<
+        if score not in scores: scores.append(score)
+        
+    scores = [score for score in scores if score_pattern.match(score)]
+    
+    return scores
+
+def get_game_dict(game_date : datetime
+                 ,home_team : str) -> dict:
+    """
+    Given home_team and date, contructs dictionary of home team, away team, ordered list of scores.
+    
+    Returns dictionary of teams, score_list (formatted HOME-AWAY)
+    """
+    
+    format_date = game_date.strftime("%Y%m%d")  # url reads date without dashes
+    
+    pbp_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"  # play-by-play (pbp) will have scores
+    game_soup, resp_code = get_soup(pbp_url)
+    
+    away_team = None 
+    score_list = None 
+
+    if resp_code == 200:  # if a play-by-play page is found, get scores and away_team
+        away_team = get_away_team(game_soup, home_team)  
+        score_list = get_score_list(game_soup)
+    
+    
+    game_dict = {'away_team'  : away_team
+                ,'home_team'  : home_team
+                ,'score_list' : score_list}
+    
+    return game_dict, resp_code
+
+### functions below are for when data is extracted from html ###
 
 def test_lawlers_law(score_list : list
                     ,win_team   : str
