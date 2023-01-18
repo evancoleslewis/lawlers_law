@@ -94,13 +94,13 @@ def get_date_parts(date : datetime) -> tuple:
     
     return year, month, day
 
-def get_soup(url : str):
+def write_html_from_url(url : str):
     """
-    Given url, get bs4 parsed html AKA soup.
-    Return soup of url.
+    Given url, retrieve html from url. Then write the html to file with abbreviated name.
+
+    Return response code of url response.
     """
 
-    soup = BeautifulSoup('')
     resp_code = 0
 
     with requests.Session() as session:
@@ -108,7 +108,8 @@ def get_soup(url : str):
         
         try:
             response = session.get(url)  # request contents of url
-            resp_code = response.status_code      
+            resp_code = response.status_code  
+            resp_html = response.text  # this is the html of the url    
             if resp_code == 200:  # status 200 means request was successful
                 soup = BeautifulSoup(response.text, features='html.parser')
 
@@ -116,7 +117,7 @@ def get_soup(url : str):
             logging.info(f"The following error occurred when accessing {url} :")
             logging.info(f"{e}")
 
-    return soup, resp_code
+    return resp_code
 
 
 def get_home_teams_on_date(date : datetime) -> list:
