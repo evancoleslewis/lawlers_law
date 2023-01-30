@@ -238,7 +238,7 @@ def extract_home_teams(date_html : str
     return list(clean_home_teams)
 
 
-def write_game_html(game_date : datetime
+def get_game_html(game_date : datetime
                  ,home_team : str) -> dict:
     """
     Given home_team and date, look for the game html locally. 
@@ -317,7 +317,7 @@ def get_game_html_between_dates(start_game_date : str
             logging.info(f"Home teams found on {game_date_str}: {home_teams}")
             # write each game to its own html file
             for home_team in home_teams:
-                resp_html, resp_code = write_game_html(game_date, home_team)
+                resp_html, resp_code = get_game_html(game_date, home_team)
         
         else:
             logging.info(f"Issue occurred while getting games on: {game_date_str}")
