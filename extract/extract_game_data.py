@@ -120,7 +120,8 @@ def abbrev_url_to_file_name(url : str) -> str:
     replace_dict = {'?'  : ''
                     ,'&' : ''
                     ,'=' : ''
-                    ,'/' : '_'}
+                    ,'/' : '_'
+                    }
 
     url_tail = url.split('boxscores/')[-1]  # get the last piece of the url (unique for each date/game)
     
@@ -164,13 +165,16 @@ def write_html_from_url(url   : str
     file_name = abbrev_url_to_file_name(url)  # abbreviate url to file_name
     full_file_path = get_full_file_path(file_name, date)  # get full path of file
 
+    
     with requests.Session() as session:
         time.sleep(2)  # add delay to not overrun bball-ref with requests
-        
+       
         try:
-            response = session.get(url)  # request contents of url
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36'}
+
+            response = session.get(url, headers=headers)
             resp_code = response.status_code  
-            resp_html = response.text  # this is the html of the url    
+            resp_html = response.text  # this is the html of the url
 
             if resp_code == 200:  # status 200 means request was successful
                 with open(full_file_path, 'w') as write_file:
