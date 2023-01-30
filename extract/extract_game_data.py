@@ -160,6 +160,7 @@ def write_html_from_url(url   : str
     """
 
     resp_code = 0  # initialize in case we do not get a resp_code from response
+    resp_html = '' # initialize in case we do not get a resp_text from response
     file_name = abbrev_url_to_file_name(url)  # abbreviate url to file_name
     full_file_path = get_full_file_path(file_name, date)  # get full path of file
 
@@ -240,7 +241,10 @@ def extract_home_teams(date_html : str
 def write_game_html(game_date : datetime
                  ,home_team : str) -> dict:
     """
-    Given home_team and date, look for the game html locally. If exists,
+    Given home_team and date, look for the game html locally. 
+    If exists, read it. If not, scrape from url.
+
+    Return html and response code
     """
     
     format_date = game_date.strftime("%Y%m%d")  # url reads date without dashes
@@ -253,6 +257,8 @@ def write_game_html(game_date : datetime
     if os.path.isfile(full_file_path):
         logging.info(f"{file_name} exists locally. Moving to next game.")
         resp_code = 200  # simulate successful response
+        with open(full_file_path, 'r') as read_file:
+            resp_html = read_file.read()
     
     # if we don't have html locally, retrieve/write it and get home_teams.
     else:
