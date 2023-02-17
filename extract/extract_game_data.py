@@ -257,7 +257,8 @@ def run_script():
 
     for date in dates:
         game_date_dt = datetime.strptime(date, '%Y-%m-%d')
-        date_url = f'https://www.basketball-reference.com/boxscores/?month={game_date_dt.month}&day={game_date_dt.day}&year={game_date_dt.year}'
+        year, month, day = get_date_parts(game_date_dt)
+        date_url = f'https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}'
         date_html, date_response_code = check_for_html(date_url, f'{date}.html', game_date_dt)
         
         home_teams = extract_home_teams(date_html, game_date_dt)
