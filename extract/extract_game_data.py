@@ -152,85 +152,15 @@ def get_full_file_path(file_name : str
     return full_file_path
 
 
-def write_html_from_url(url   : str
-                        ,date : datetime):
-    """
-    Given url, retrieve html from url. Then write the html to file with abbreviated name in the given date directory.
-
-    Return response code of url response.
-    """
-
-    resp_code = 0  # initialize in case we do not get a resp_code from response
-    resp_html = '' # initialize in case we do not get a resp_text from response
-    file_name = abbrev_url_to_file_name(url)  # abbreviate url to file_name
-    full_file_path = get_full_file_path(file_name, date)  # get full path of file
-
-    
-    with requests.Session() as session:
-        time.sleep(2)  # add delay to not overrun bball-ref with requests
-       
-        try:
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36'}
-
-            response = session.get(url, headers=headers)
-            resp_code = response.status_code  
-            resp_html = response.text  # this is the html of the url
-
-            if resp_code == 200:  # status 200 means request was successful
-                with open(full_file_path, 'w') as write_file:
-                    write_file.write(resp_html)  # write the html to the corresponding file
-
-        except Exception as e:
-            logging.info(f"The following error occurred when accessing/writing the html from {url} :")
-            logging.info(f"{e}")
-
-    return resp_html, resp_code
-
-
-def get_game_date_html(date : datetime) -> list:
-    """
-    Given a date, check if we have html for that date. If not, attempt to retrieve/write html.
-    
-    If we get html for the date, get the home teams on date.
-
-    Returns list of home teams. 
-    """
-    
-    home_teams = []
-
-    year, month, day = get_date_parts(date)  # split date parts for url formatting
-    format_date = date.strftime("%Y%m%d")  # used for identifying hometeams in extract_home_teams()
-    date_url = f"https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}.html"
-
-    file_name = abbrev_url_to_file_name(date_url)  # abbreviate url to file_name
-    full_file_path = get_full_file_path(file_name, date)  # get full path of file
-
-    # if we have the html locally, read it
-    if os.path.isfile(full_file_path):
-        logging.info(f"{file_name} exists locally. Attempting to read...")
-        resp_code = 200 # simulate successful response
-        with open(full_file_path, 'r') as read_file:
-            resp_html = read_file.read()
-    
-    # if we don't have html locally, retrieve/write it and get home_teams.
-    else:
-        resp_html, resp_code = write_html_from_url(date_url, date)  # attempt to write html
-    
-    if resp_code == 200:
-        home_teams = extract_home_teams(resp_html, format_date)
-    else:
-        logging.error(f"Error occurred when accessing {date_url}")
-    
-    return home_teams, resp_code
-
-
 def extract_home_teams(date_html : str
-                    ,format_date : str) -> list:
+                    ,game_date : str) -> list:
     """
     Gets soup from html and parses soup to get list of home_teams.
     
     Returns list of home team.
     """
+    
+    format_date = game_date.strftime("%Y%m%d")
     
     date_soup = get_soup(date_html)  # turn html to readable soup
 
@@ -241,35 +171,6 @@ def extract_home_teams(date_html : str
     
     return list(clean_home_teams)
 
-
-def get_game_html(game_date : datetime
-                 ,home_team : str) -> dict:
-    """
-    Given home_team and date, look for the game html locally. 
-    If exists, read it. If not, scrape from url.
-
-    Return html and response code
-    """
-    
-    format_date = game_date.strftime("%Y%m%d")  # url reads date without dashes
-    
-    pbp_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"  # play-by-play (pbp) will have scores
-    file_name = abbrev_url_to_file_name(pbp_url)
-    full_file_path = get_full_file_path(file_name, game_date)
-
-    # if we have the html locally, read it
-    if os.path.isfile(full_file_path):
-        logging.info(f"{file_name} exists locally. Moving to next game.")
-        resp_code = 200  # simulate successful response
-        with open(full_file_path, 'r') as read_file:
-            resp_html = read_file.read()
-    
-    # if we don't have html locally, retrieve/write it and get home_teams.
-    else:
-        resp_html, resp_code = write_html_from_url(pbp_url, game_date)  # attempt to write html
-
-    
-    return resp_html, resp_code
 
 def get_date_range(start_game_date : str
                   ,end_game_date   : str) -> tuple:
@@ -293,38 +194,76 @@ def get_date_range(start_game_date : str
 
     return start_game_date, end_game_date, game_dates 
 
-
-def get_game_html_between_dates(start_game_date : str
-                               ,end_game_date   : str) -> dict:
-    """
-    Given 2 dates, get list of all dates in between them (inclusive). 
-    Then find all games on those dates. For each game, check if the game data (html) is stored locally. If not, retrieve the html and store locally
+def write_html(url     : str 
+               ,abbrev : str
+               ,date   : str) -> tuple:
     
-    Returns dictionary of game_dicts.
-    """
-
-    logging.info(f"Searching for game data in following date range: {start_game_date} - {end_game_date}\n")
-    start_game_date, end_game_date, game_dates = get_date_range(start_game_date, end_game_date)  # get list of dates in between start and end (inclusive)
+    response_html = ''
+    response_code = 0
     
-    # For each game_date, attempt to find games. 
-    # If a game is found, check to see if the html for the game is stored locally yet.
-    ## If html is stored locally, move to next game/date.
-    ## If html is not stored locally, attempt to retrieve from internet and write the html locally.
-    # If no games are found, move to next date.
+    full_file_path = get_full_file_path(abbrev, date)
+    
+    time.sleep(2)  # sleep to not overwhelm bball-ref with requests (will get banned)
 
-    for game_date in game_dates:
-        game_date_str = game_date.strftime("%Y-%m-%d")
-
-        home_teams, resp_code = get_game_date_html(game_date)  # read or extract game_date_html and get home_teams on_date
-
-        if resp_code == 200:  
-            logging.info(f"Home teams found on {game_date_str}: {home_teams}")
-            # write each game to its own html file
-            for home_team in home_teams:
-                resp_html, resp_code = get_game_html(game_date, home_team)
+    
+    with requests.Session() as session:
+        response = session.get(url)
+        response_html = response.text
+        response_code = response.status_code
         
-        else:
-            logging.info(f"Issue occurred while getting games on: {game_date_str}")
-            break
+        if response_code == 200:  # successful response
+            
+            with open(full_file_path, 'w') as html_file:  # write html to file
+                html_file.write(response_html)
+        
+    return response_html, response_code
 
+
+def check_for_html(url  : str 
+              ,abbrev    : str
+              ,game_date : datetime) -> tuple:
+
+    full_file_path = get_full_file_path(abbrev, game_date)
+
+    if os.path.exists(full_file_path):
+        print(f'{abbrev} already exists locally. Reading...')
+        response_code = 200 # simulate successful response
+
+        with open(full_file_path, 'r') as read_file:
+            html = read_file.read()
+        
+    else:
+        print(f'{abbrev} does not yet exist. Writing...')
+        html, response_code = write_html(url, abbrev, game_date)
+
+    return html, response_code
+
+
+def get_all_games_on_date(game_date  : datetime 
+                         ,home_teams : list):
+    
+    format_date = game_date.strftime("%Y%m%d")
+    
+    for home_team in home_teams:
+        game_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"
+        abbrev = abbrev_url_to_file_name(game_url)
+        game_html, game_response_code = check_for_html(game_url, abbrev, game_date)
+        
     return 
+
+def run_script():
+    
+    dates = ['2022-11-14', '2022-11-15']
+
+    for date in dates:
+        game_date_dt = datetime.strptime(date, '%Y-%m-%d')
+        date_url = f'https://www.basketball-reference.com/boxscores/?month={game_date_dt.month}&day={game_date_dt.day}&year={game_date_dt.year}'
+        date_html, date_response_code = check_for_html(date_url, f'{date}.html', game_date_dt)
+        
+        home_teams = extract_home_teams(date_html, game_date_dt)
+        get_all_games_on_date(game_date_dt, home_teams)
+    
+    return 
+
+
+run_script()
