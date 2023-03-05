@@ -192,7 +192,7 @@ def get_date_range(start_game_date : str
         print('There is something wrong with the dates inputted. Ensure your dates formatted as YYYY-MM-DD.')
         logging.error(f"The following error occurred when trying to generate a date range:\n{e}")
 
-    return start_game_date, end_game_date, game_dates 
+    return game_dates 
 
 def write_html(url     : str 
                ,abbrev : str
@@ -207,9 +207,9 @@ def write_html(url     : str
 
     
     with requests.Session() as session:
-        response = session.get(url)
-        response_html = response.text
-        response_code = response.status_code
+        response = session.get(url)  # request contents of url
+        response_html = response.text   # parse contents for html
+        response_code = response.status_code  # parse contents for status_code
         
         if response_code == 200:  # successful response
             
@@ -251,20 +251,18 @@ def get_all_games_on_date(game_date  : datetime
         
     return 
 
-def run_script():
-    
-    dates = ['2022-11-14', '2022-11-15']
+def get_game_html_between_dates(start_game_date : datetime 
+                                ,end_game_date  : datetime):
 
-    for date in dates:
-        game_date_dt = datetime.strptime(date, '%Y-%m-%d')
-        year, month, day = get_date_parts(game_date_dt)
+    game_dates = get_date_range(start_game_date, end_game_date)    
+
+    for game_date in game_dates:
+        year, month, day = get_date_parts(game_date)
         date_url = f'https://www.basketball-reference.com/boxscores/?month={month}&day={day}&year={year}'
-        date_html, date_response_code = check_for_html(date_url, f'{date}.html', game_date_dt)
+        date_file = f"{game_date.strftime('%Y-%m-%d')}.html"  # file_name is formatted yyyy-mm-dd.html
+        date_html, date_response_code = check_for_html(date_url, date_file, game_date)
         
-        home_teams = extract_home_teams(date_html, game_date_dt)
-        get_all_games_on_date(game_date_dt, home_teams)
+        home_teams = extract_home_teams(date_html, game_date)
+        get_all_games_on_date(game_date, home_teams)
     
-    return 
-
-
-run_script()
+    return
