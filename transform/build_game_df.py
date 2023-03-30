@@ -1,4 +1,140 @@
+import logging
 import pandas as pd
+import numpy as np
+import requests 
+import time
+import re
+
+from datetime import datetime, timedelta 
+from bs4 import BeautifulSoup
+
+team_dict = {'ATL' : ["Atlanta Hawks"]
+            ,'BUF' : ["Buffalo Braves"]
+            ,'BKN' : ["Brooklyn Nets"]
+            ,'BOS' : ["Boston Celtics"]
+            ,'BUF' : ['Buffalo Braves']
+            ,'CHA' : ["Charlotte Hornets"]
+            ,'CHH' : ['Charlotte Hornets']
+            ,'CHI' : ["Chicago Bulls"]
+            ,'CLE' : ["Cleveland Cavaliers"]
+            ,'DAL' : ["Dallas Mavericks"]
+            ,'DEN' : ["Denver Nuggets"]
+            ,'DET' : ["Detroit Pistons"]
+            ,'GSW' : ["Golden State Warriors"]
+            ,'HOU' : ["Houston Rockets"]
+            ,'IND' : ["Indiana Pacers"]
+            ,'KCK' : ['Kansas City Kings']
+            ,'LAC' : ["Los Angeles Clippers"]
+            ,'LAL' : ["Los Angeles Lakers"]
+            ,'MEM' : ["Memphis Grizzlies"]
+            ,'MIA' : ["Miami Heat"]
+            ,'MIL' : ["Milwaukee Bucks"]
+            ,'MIN' : ["Minnesota Timberwolves"]
+            ,'NJN' : ['New Jersey Nets']
+            ,'NOJ' : ['New Orleans Jazz']
+            ,'NOP' : ["New Orleans Pelicans"]
+            ,'NYK' : ["New York Knicks"]
+            ,'OKC' : ["Oklahoma City Thunder"]
+            ,'ORL' : ["Orlando Magic"]
+            ,'PHI' : ["Philadelphia 76ers"]
+            ,'PHX' : ["Phoenix Suns"]
+            ,'PHO' : ["Phoenix Suns"]  # b-ball ref seems to use both?
+            ,'POR' : ["Portland Trail Blazers"]
+            ,'SAC' : ["Sacramento Kings"]
+            ,'SAS' : ["San Antonio Spurs"]
+            ,'SEA' : ["Seattle SuperSonics"]
+            ,'TOR' : ["Toronto Raptors"]
+            ,'UTA' : ["Utah Jazz"]
+            ,'WAS' : ["Washington Wizards"]
+            ,'WSB' : ['Washington Bullets']
+            }
+
+### functions below are for parsing html ###
+
+def get_soup(html : str):
+    """
+    Given html, get bs4 parsed html AKA soup.
+    Return soup of html.
+    """
+
+    soup = BeautifulSoup('')
+
+    try:
+        soup = BeautifulSoup(html, features='html.parser')
+
+    except Exception as e:
+        logging.info(f"The following error occurred when accessing {file_name} :")
+        logging.info(f"{e}")
+
+    return soup
+
+def get_away_team(game_soup
+                 ,home_team : str) -> str:
+    """
+    Given home_team and game_soup, extract away team of game.
+    
+    Returns away team.
+    """
+    
+    meta_tags = game_soup.find_all('meta')
+    pattern = re.compile(f"(.*)content=\"(.*) vs {home_team}")
+
+    away_team = None
+    i = -1
+
+    # search for away_team, if team is not found within meta_tags, return 'not_found'
+    while not away_team:
+        i += 1  # move to next index
+        if i == len(meta_tags): away_team = 'not_found'  # if index out of bounds, we could not find team
+
+        tag = meta_tags[i]
+        if pattern.match(str(tag)):
+            team_str = re.search(f"content=\"(.*) vs {home_team}", str(tag)).group(1)  # away team is beginning of this string
+            away_team = team_str[:3]  # first 3 characters will be away team
+            
+    return away_team
+
+
+def get_score_list(game_soup) -> list:
+    """
+    Given table of bs4.element.tag's, extract score from each tag.
+    
+    Returns list of unique scores in chronological order.
+    """
+    
+    score_tags = game_soup.find_all('td', class_='center')
+    score_pattern = re.compile("[0-9](.*)[0-9]")  # pattern for what scores look like
+    
+    scores = []
+    for tag in score_tags:
+        score = re.search(">(.*)<", str(tag)).group(1)  # all scores are formatted as >away_score-home_score<
+        if score not in scores: scores.append(score)
+        
+    scores = [score for score in scores if score_pattern.match(score)]
+    
+    return scores
+
+def get_teams_and_scores(game_html) -> dict:
+    """
+    Given home_team and date, contructs dictionary of home team, away team, ordered list of scores.
+    
+    Returns dictionary of teams, score_list (formatted HOME-AWAY)
+    """
+    
+
+    game_soup = get_soup(game_html)
+    
+    away_team = get_away_team(game_soup, home_team)  
+    score_list = get_score_list(game_soup)
+
+    
+    game_dict = {'away_team'  : away_team
+                ,'home_team'  : home_team
+                ,'score_list' : score_list}
+    
+    return game_dict, resp_code
+
+### functions below are for when data is extracted from html ###
 
 def test_lawlers_law(score_list : list
                     ,win_team   : str
@@ -69,7 +205,7 @@ def get_game_attributes(away_team   : str
     return final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100
 
 
-def build_all_games_df(all_games_dict : dict) -> pd.DataFrame:
+def read_game_data_from_html(all_html_dict : dict) -> pd.DataFrame:
     """
     Builds dataframe based on home_team, away_team, score_list.
     
@@ -78,39 +214,42 @@ def build_all_games_df(all_games_dict : dict) -> pd.DataFrame:
     
     df_dict = dict()  # dictionary where all dataframes will be stored
 
-    for game_date in all_games_dict.keys():  # iterate through each day
-        game_day_dict = all_games_dict[game_date]
+    for game in all_html_dict.keys():  # each key is a game with corresponding html
+
+        home_team = game.split('.html')[0][-3:]  # home team will always be 3 chars before .html
+        raw_date = game.split(f"0{home_team}.html")[0][-8:]  # date will always preced substring in the split
+        game_date = datetime.strptime(raw_date, '%Y%m%d').strftime("%Y-%m-%d")  # format to yyy-mm-dd
+
+        game_html = all_html_dict.get(game)  # retrieve html
+        game_soup = get_soup(game_html)  # parse html into soup
+
+        away_team = get_away_team(game_soup, home_team)  
+        score_list = get_score_list(game_soup)
+
         
-        for home_team in game_day_dict.keys():  # each day has a set of home_team(s)
-            game_dict = game_day_dict[home_team]  # each home_team represents a game on that day
-            away_team = game_dict['away_team']
-            home_team = game_dict['home_team']
-            score_list = game_dict['score_list']
-            
-            
-            final_score = None
-            win_team = None
-            lose_team = None
-            reached_100_bool = None
-            lawler_bool = None 
-            delta_at_100 = None 
-            score_at_100 = None 
+        final_score = None
+        win_team = None
+        lose_team = None
+        reached_100_bool = None
+        lawler_bool = None 
+        delta_at_100 = None 
+        score_at_100 = None 
 
-            if len(score_list) > 0:  # if we were able to get a score_list, we overwrite the attributes initialized above
-                final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100 = get_game_attributes(away_team, home_team, score_list)
-            
-            game_df = pd.DataFrame({'game_date': [game_date]
-                                ,'away_team' : [away_team]
-                                ,'home_team' : [home_team]
-                                ,'final_score' : [final_score]
-                                ,'win_team' : [win_team]
-                                ,'lose_team' : [lose_team]
-                                ,'reached_100_bool' : [reached_100_bool]
-                                ,'lawler_bool' : [lawler_bool]
-                                ,'score_at_100' : [score_at_100]
-                                ,'delta_at_100' : [delta_at_100]})
+        if len(score_list) > 0:  # if we were able to get a score_list, we overwrite the attributes initialized above
+            final_score, win_team, lose_team, reached_100_bool, lawler_bool, delta_at_100, score_at_100 = get_game_attributes(away_team, home_team, score_list)
+        
+        game_df = pd.DataFrame({'game_date': [game_date]
+                            ,'away_team' : [away_team]
+                            ,'home_team' : [home_team]
+                            ,'final_score' : [final_score]
+                            ,'win_team' : [win_team]
+                            ,'lose_team' : [lose_team]
+                            ,'reached_100_bool' : [reached_100_bool]
+                            ,'lawler_bool' : [lawler_bool]
+                            ,'score_at_100' : [score_at_100]
+                            ,'delta_at_100' : [delta_at_100]})
 
-            df_dict[game_date+'_'+home_team] = game_df.copy()  # each df has a unique game_date + home_team pairing
+        df_dict[game] = game_df.copy()  # each df has a unique game_date + home_team pairing
         
     all_games_df = pd.DataFrame()  # in case there is no game data in the date range
     
