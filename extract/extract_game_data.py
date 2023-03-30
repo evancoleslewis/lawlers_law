@@ -173,13 +173,13 @@ def extract_home_teams(date_html : str
 
 
 def get_date_range(start_game_date : str
-                  ,end_game_date   : str) -> tuple:
+                  ,end_game_date   : str) -> list:
     """
     Takes start date and end date and does 2 things:
         1. Ensure dates are formatted properly
         2. Generates a list of dates in between start and end (inclusive)
     
-    Returns formatted dates and date_list
+    Returns formatted date_list
     """
 
     try:
@@ -241,6 +241,13 @@ def check_for_html(url  : str
 
 def get_all_games_on_date(game_date  : datetime 
                          ,home_teams : list):
+    """
+    For each date and list of home_teams, and search for the corresponding html
+    for each game. (date / home_team combo) 
+
+    If we have the html for the game already, we iterate to the next home_team.
+    If we don't have the html, scrape it from bball ref and write it locally. 
+    """
     
     format_date = game_date.strftime("%Y%m%d")
     
@@ -253,6 +260,13 @@ def get_all_games_on_date(game_date  : datetime
 
 def get_game_html_between_dates(start_game_date : datetime 
                                 ,end_game_date  : datetime):
+    """
+    Given a start_date and end_date, get an inclusive list of all dates in between. 
+    Iterates through date_list and looks for the corresponding html for each date.
+
+    If we have the html for the date already, we iterate to the next home_team.
+    If we don't have the html, scrape it from bball ref and write it locally. 
+    """
 
     game_dates = get_date_range(start_game_date, end_game_date)    
 
@@ -266,3 +280,7 @@ def get_game_html_between_dates(start_game_date : datetime
         get_all_games_on_date(game_date, home_teams)
     
     return
+# TODO #
+## remove the html from the return statements (will read the html in transform/)
+## convert prints to logs
+## implement try except logic and status 200 logic
