@@ -260,16 +260,21 @@ def get_all_games_on_date(game_date  : datetime
 
     If we have the html for the game already, we iterate to the next home_team.
     If we don't have the html, scrape it from bball ref and write it locally. 
+
+    Returns dictionary containing all game html.
     """
     
     format_date = game_date.strftime("%Y%m%d")
+    game_html_dict = dict()
     
     for home_team in home_teams:
         game_url = f"https://www.basketball-reference.com/boxscores/pbp/{format_date}0{home_team}.html"
         abbrev = abbrev_url_to_file_name(game_url)
         game_html, game_response_code = check_for_html(game_url, abbrev, game_date)
         
-    return 
+        game_html_dict[abbrev] = game_html
+        
+    return game_html_dict
 
 def get_game_html_between_dates(start_game_date : datetime 
                                 ,end_game_date  : datetime):
@@ -279,9 +284,12 @@ def get_game_html_between_dates(start_game_date : datetime
 
     If we have the html for the date already, we iterate to the next home_team.
     If we don't have the html, scrape it from bball ref and write it locally. 
+
+    Returns dictionary of all game htmls between dates.
     """
 
-    game_dates = get_date_range(start_game_date, end_game_date)    
+    game_dates = get_date_range(start_game_date, end_game_date)
+    all_html_list = []
 
     for game_date in game_dates:
         year, month, day = get_date_parts(game_date)
@@ -290,6 +298,10 @@ def get_game_html_between_dates(start_game_date : datetime
         date_html, date_response_code = check_for_html(date_url, date_file, game_date)
         
         home_teams = extract_home_teams(date_html, game_date)
-        get_all_games_on_date(game_date, home_teams)
-    
-    return
+        game_html_dict = get_all_games_on_date(game_date, home_teams)  # get dict of all game_htmls
+
+        all_html_list.append(game_html_dict)  # store html dict in list
+
+    all_html_dict = {key : value for html_dict in all_html_list for key, value in html_dict.items()}  # concatenate list of dicts into 1 dict
+
+    return all_html_dict
