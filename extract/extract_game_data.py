@@ -293,5 +293,3 @@ def get_game_html_between_dates(start_game_date : datetime
         get_all_games_on_date(game_date, home_teams)
     
     return
-# TODO #
-## implement try except logic and status 200 logic
