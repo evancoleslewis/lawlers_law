@@ -198,6 +198,12 @@ def write_html(url     : str
                ,abbrev : str
                ,date   : str) -> tuple:
     
+    """
+    Given a url, abbreviation, game_date scrape the corresponding html using requests.
+
+    Returns html and response_code.
+    """
+    
     response_html = ''
     response_code = 0
     
@@ -223,17 +229,24 @@ def check_for_html(url  : str
               ,abbrev    : str
               ,game_date : datetime) -> tuple:
 
+    """
+    Given a url, abbreviation, game_date we look for the corresponding html locally.
+    Write/read the html depending on whether or not it exists. 
+    
+    Returns the html and response_code of request for the html.
+    """
+
     full_file_path = get_full_file_path(abbrev, game_date)
 
     if os.path.exists(full_file_path):
-        print(f'{abbrev} already exists locally. Reading...')
+        logging.info(f'{abbrev} already exists locally. Reading...')
         response_code = 200 # simulate successful response
 
         with open(full_file_path, 'r') as read_file:
             html = read_file.read()
         
     else:
-        print(f'{abbrev} does not yet exist. Writing...')
+        logging.info(f'{abbrev} does not yet exist. Writing...')
         html, response_code = write_html(url, abbrev, game_date)
 
     return html, response_code
@@ -281,6 +294,4 @@ def get_game_html_between_dates(start_game_date : datetime
     
     return
 # TODO #
-## remove the html from the return statements (will read the html in transform/)
-## convert prints to logs
 ## implement try except logic and status 200 logic
